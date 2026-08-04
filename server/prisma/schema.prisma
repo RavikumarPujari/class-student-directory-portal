@@ -1,0 +1,39 @@
+// Prisma schema — SQLite local database
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id             String   @id @default(cuid())
+  name           String
+  usn            String   @unique
+  section        String
+  phone          String
+  email          String   @unique
+  linkedin       String
+  github         String
+  portfolio      String?
+  favoriteDomain String   @map("favorite_domain")
+  skills         String // stored as comma-separated string
+  bio            String?
+  photo          String? // base64 data URL or file path, optional
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("students")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String   @default("Administrator")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
