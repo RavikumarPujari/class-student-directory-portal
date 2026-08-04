@@ -2,7 +2,7 @@
 
 A premium, production-quality full-stack web application where students register once and
 appear in a searchable class directory, while admins get full CRUD control, live analytics, and
-one-click CSV/Excel export — all backed by a local SQLite database (no cloud services required).
+one-click CSV/Excel export — backed by a PostgreSQL database (Neon) for production use.
 
 ---
 
@@ -28,7 +28,7 @@ one-click CSV/Excel export — all backed by a local SQLite database (no cloud s
 | Animation      | Framer Motion                                                     |
 | Icons / Charts | Lucide Icons + Recharts                                           |
 | Backend        | Node.js + Express + TypeScript                                    |
-| Database       | SQLite (local file) via Prisma ORM                                |
+| Database       | PostgreSQL (Neon) via Prisma ORM                                  |
 | Auth           | JWT + bcrypt                                                       |
 
 ---
@@ -51,7 +51,7 @@ studentportal/
 │
 ├── server/                      # Express + TypeScript backend
 │   ├── prisma/
-│   │   ├── schema.prisma        # Student & Admin models (SQLite)
+│   │   ├── schema.prisma        # Student & Admin models (PostgreSQL)
 │   │   └── seed.ts              # creates the default admin account
 │   └── src/
 │       ├── routes/               # auth, students, dashboard
@@ -82,7 +82,7 @@ npm run dev
 That's it. `npm install` will:
 1. Install root, `server`, and `client` dependencies
 2. Generate the Prisma client
-3. Create `server/dev.db` (SQLite) and run migrations to create the `students` and `admins` tables
+3. Run migrations against your PostgreSQL database to create the `students` and `admins` tables
 4. Seed a default admin account
 
 `npm run dev` then starts:
@@ -105,7 +105,7 @@ ADMIN_PASSWORD=Admin@12345
 ### Environment Variables (`server/.env`)
 
 ```
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DBNAME?sslmode=require"
 PORT=5000
 JWT_SECRET="change_this_to_a_long_random_secret_in_production"
 JWT_EXPIRES_IN="1d"
@@ -114,10 +114,11 @@ ADMIN_EMAIL="admin@classportal.com"
 ADMIN_PASSWORD="Admin@12345"
 ```
 
-If you ever need to reset the database, delete `server/dev.db` and re-run:
+If you ever need to reset the database, run:
 ```bash
-npm run db:setup
+cd server && npx prisma migrate reset --force
 ```
+This drops all tables and re-applies migrations, then you can re-seed with `npm run seed`.
 
 ---
 
@@ -206,6 +207,6 @@ model Admin {
 
 ## 📝 Notes
 
-- Profile photos are stored as base64 data URLs directly in SQLite (kept under 1.5MB client-side) — no external file storage or cloud buckets are used, per the "manual storage mode" requirement.
+- Profile photos are stored as base64 data URLs directly in the database (kept under 1.5MB client-side) — no external file storage or cloud buckets are used, per the "manual storage mode" requirement.
 - The frontend dev server proxies `/api/*` to `http://localhost:5000`, so no CORS configuration is needed in development.
 - For a production deployment, build both apps (`npm run build`), serve the compiled `client/dist` via a static host or from Express, and run `node server/dist/index.js` behind a process manager.

@@ -6,9 +6,9 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
 async function start() {
   try {
-    // Verifies the SQLite database file & Prisma client are reachable before serving traffic.
+    // Verifies the PostgreSQL database & Prisma client are reachable before serving traffic.
     await prisma.$connect();
-    console.log("✅ Connected to SQLite database via Prisma");
+    console.log("✅ Connected to PostgreSQL database via Prisma");
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);
