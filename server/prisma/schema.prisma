@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id             String    @id @default(cuid())
+  name           String
+  usn            String    @unique
+  section        String
+  branch         String
+  year           String
+  semester       Int
+  phone          String
+  email          String    @unique
+  linkedin       String?
+  github         String?
+  portfolio      String?
+  favoriteDomain String    @map("favorite_domain")
+  skills         String
+  bio            String?
+  photo          String?
+  lastLoginAt    DateTime? @map("last_login_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  passwordHash   String?   @map("password_hash")
+
+  ledTeams        Team[]           @relation("TeamLeader")
+  teamMemberships TeamMember[]     @relation("StudentMemberships")
+  teamInvitations TeamInvitation[] @relation("StudentInvitations")
+
+  @@map("students")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String   @default("Administrator")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Team {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  requiredSkills String?  @map("required_skills")
+  leaderId       String   @map("leader_id")
+  maxSize        Int      @default(5) @map("max_size")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  leader      Student          @relation("TeamLeader", fields: [leaderId], references: [id])
+  members     TeamMember[]     @relation("TeamMembers")
+  invitations TeamInvitation[] @relation("TeamInvitations")
+
+  @@map("teams")
+}
+
+model TeamMember {
+  teamId    String   @map("team_id")
+  studentId String   @map("student_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team      Team     @relation("TeamMembers", fields: [teamId], references: [id])
+  student   Student  @relation("StudentMemberships", fields: [studentId], references: [id])
+
+  @@unique([teamId, studentId])
+  @@map("team_members")
+}
+
+model TeamInvitation {
+  id        String           @id @default(cuid())
+  teamId    String           @map("team_id")
+  studentId String           @map("student_id")
+  status    InvitationStatus @default(PENDING)
+  token     String           @unique
+  expiresAt DateTime         @map("expires_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  team      Team     @relation("TeamInvitations", fields: [teamId], references: [id])
+  student   Student  @relation("StudentInvitations", fields: [studentId], references: [id])
+
+  @@map("team_invitations")
+}

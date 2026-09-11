@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "students" ALTER COLUMN "branch" DROP DEFAULT,
+ALTER COLUMN "year" DROP DEFAULT,
+ALTER COLUMN "semester" DROP DEFAULT;
