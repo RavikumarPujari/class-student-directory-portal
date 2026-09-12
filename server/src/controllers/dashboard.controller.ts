@@ -19,8 +19,10 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
     const domainCounts: Record<string, number> = {};
 
     for (const s of students) {
-      sectionCounts[s.section] = (sectionCounts[s.section] || 0) + 1;
-      domainCounts[s.favoriteDomain] = (domainCounts[s.favoriteDomain] || 0) + 1;
+      const sec = s.section || "Unassigned";
+      const dom = s.favoriteDomain || "Unassigned";
+      sectionCounts[sec] = (sectionCounts[sec] || 0) + 1;
+      domainCounts[dom] = (domainCounts[dom] || 0) + 1;
     }
 
     const toChartArray = (record: Record<string, number>) =>

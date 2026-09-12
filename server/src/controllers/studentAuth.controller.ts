@@ -90,44 +90,45 @@ const {
       password,
     } = req.body;
 
-// USN and email are permanent identifiers — never editable after registration.
+    // USN and email are permanent identifiers — never editable after registration.
     const usnUpper = existing.usn;
     const emailLower = existing.email;
-    const phoneTrimmed = (phone || existing.phone).trim();
+    const phoneTrimmed = (phone || existing.phone || "").trim();
 
     // Prevent a student from taking another student's phone number.
-    const duplicate = await prisma.student.findFirst({
-      where: {
-        id: { not: studentId },
-        phone: phoneTrimmed,
-      },
-    });
-    if (duplicate) {
-      throw new HttpError(409, "Another student already uses this mobile number");
+    if (phoneTrimmed) {
+      const duplicate = await prisma.student.findFirst({
+        where: {
+          id: { not: studentId },
+          phone: phoneTrimmed,
+        },
+      });
+      if (duplicate) {
+        throw new HttpError(409, "This mobile number is already registered to someone else.");
+      }
     }
 
     let passwordHash = existing.passwordHash;
-    if (password) {
+    if (password && password.trim() !== "") {
       passwordHash = await bcrypt.hash(password, 12);
     }
 
-const updated = await prisma.student.update({
+    const updated = await prisma.student.update({
       where: { id: studentId },
       data: {
-        name: name ?? existing.name,
-        usn: usnUpper,
-        section: (section || existing.section).toUpperCase(),
-        branch: branch ?? existing.branch,
-        year: year ?? existing.year,
-        semester: semester !== undefined ? parseInt(semester, 10) : existing.semester,
-        phone: phone ?? existing.phone,
-        email: emailLower,
-        linkedin: linkedin ?? existing.linkedin,
-        github: github ?? existing.github,
-        portfolio: portfolio ?? existing.portfolio,
-favoriteDomain: favoriteDomain ?? existing.favoriteDomain,
-        skills: skills ?? existing.skills,
-        bio: bio ?? existing.bio,
+        name: name || existing.name,
+        // usn and email omitted as they are locked
+        section: section ? section.toUpperCase() : existing.section,
+        branch: branch || existing.branch,
+        year: year || existing.year,
+        semester: semester ? parseInt(semester, 10) : existing.semester,
+        phone: phoneTrimmed || existing.phone,
+        linkedin: linkedin !== undefined ? (linkedin || null) : existing.linkedin,
+        github: github !== undefined ? (github || null) : existing.github,
+        portfolio: portfolio !== undefined ? (portfolio || null) : existing.portfolio,
+        favoriteDomain: favoriteDomain || existing.favoriteDomain,
+        skills: skills || existing.skills,
+        bio: bio !== undefined ? (bio || null) : existing.bio,
         photo: photo ?? existing.photo,
         passwordHash,
       },

@@ -178,3 +178,101 @@ export async function getTeam(req: AuthenticatedRequest, res: Response, next: Ne
     next(err);
   }
 }
+
+// GET /api/teams/:teamId/messages
+export async function getTeamMessages(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const studentId = req.student?.studentId;
+    const { teamId } = req.params;
+
+    if (!studentId) {
+      throw new HttpError(401, "Authentication required");
+    }
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true }
+    });
+
+    if (!team) {
+      throw new HttpError(404, "Team not found");
+    }
+
+    const isMember = team.members.some(m => m.studentId === studentId);
+    if (team.leaderId !== studentId && !isMember) {
+      throw new HttpError(403, "You do not have permission to view team messages");
+    }
+
+    const messages = await prisma.teamMessage.findMany({
+      where: { teamId },
+      include: {
+        sender: {
+          select: { id: true, name: true, photo: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      data: messages
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/teams/:teamId/messages
+export async function createTeamMessage(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const studentId = req.student?.studentId;
+    const { teamId } = req.params;
+    const { content } = req.body;
+
+    if (!studentId) {
+      throw new HttpError(401, "Authentication required");
+    }
+
+    if (!content || !content.trim()) {
+      throw new HttpError(400, "Message content cannot be empty");
+    }
+
+    if (content.length > 2000) {
+      throw new HttpError(400, "Message exceeds maximum length");
+    }
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true }
+    });
+
+    if (!team) {
+      throw new HttpError(404, "Team not found");
+    }
+
+    const isMember = team.members.some(m => m.studentId === studentId);
+    if (team.leaderId !== studentId && !isMember) {
+      throw new HttpError(403, "You do not have permission to send team messages");
+    }
+
+    const message = await prisma.teamMessage.create({
+      data: {
+        teamId,
+        senderId: studentId,
+        content: content.trim()
+      },
+      include: {
+        sender: {
+          select: { id: true, name: true, photo: true }
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      data: message
+    });
+  } catch (err) {
+    next(err);
+  }
+}

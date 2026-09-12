@@ -11,17 +11,17 @@ model Student {
   id             String    @id @default(cuid())
   name           String
   usn            String    @unique
-  section        String
-  branch         String
-  year           String
-  semester       Int
-  phone          String
+  section        String?
+  branch         String?
+  year           String?
+  semester       Int?
+  phone          String?
   email          String    @unique
   linkedin       String?
   github         String?
   portfolio      String?
-  favoriteDomain String    @map("favorite_domain")
-  skills         String
+  favoriteDomain String?   @map("favorite_domain")
+  skills         String?
   bio            String?
   photo          String?
   lastLoginAt    DateTime? @map("last_login_at")
@@ -29,9 +29,10 @@ model Student {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   passwordHash   String?   @map("password_hash")
 
-  ledTeams        Team[]           @relation("TeamLeader")
-  teamMemberships TeamMember[]     @relation("StudentMemberships")
-  teamInvitations TeamInvitation[] @relation("StudentInvitations")
+  ledTeams         Team[]           @relation("TeamLeader")
+  teamMemberships  TeamMember[]     @relation("StudentMemberships")
+  teamInvitations  TeamInvitation[] @relation("StudentInvitations")
+  sentTeamMessages TeamMessage[]    @relation("StudentTeamMessages")
 
   @@map("students")
 }
@@ -65,6 +66,7 @@ model Team {
   leader      Student          @relation("TeamLeader", fields: [leaderId], references: [id])
   members     TeamMember[]     @relation("TeamMembers")
   invitations TeamInvitation[] @relation("TeamInvitations")
+  messages    TeamMessage[]    @relation("TeamMessages")
 
   @@map("teams")
 }
@@ -95,4 +97,20 @@ model TeamInvitation {
   student   Student  @relation("StudentInvitations", fields: [studentId], references: [id])
 
   @@map("team_invitations")
+}
+
+model TeamMessage {
+  id        String   @id @default(cuid())
+  teamId    String   @map("team_id")
+  senderId  String   @map("sender_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team      Team     @relation("TeamMessages", fields: [teamId], references: [id], onDelete: Cascade)
+  sender    Student  @relation("StudentTeamMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([createdAt])
+  @@map("team_messages")
 }

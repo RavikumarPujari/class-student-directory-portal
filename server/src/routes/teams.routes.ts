@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { body } from "express-validator";
-import { createTeam, getMyTeams, getTeam } from "../controllers/teams.controller";
+import { createTeam, getMyTeams, getTeam, getTeamMessages, createTeamMessage } from "../controllers/teams.controller";
 import { getMatchingStudents } from "../controllers/matching.controller";
 import { createInvitation, getTeamInvitations } from "../controllers/invitations.controller";
 import { requireStudentAuth } from "../middleware/auth.middleware";
@@ -50,6 +50,19 @@ router.get("/me", requireStudentAuth, getMyTeams);
 
 // GET /api/teams/:teamId
 router.get("/:teamId", requireStudentAuth, getTeam);
+
+// GET /api/teams/:teamId/messages
+router.get("/:teamId/messages", requireStudentAuth, getTeamMessages);
+
+// POST /api/teams/:teamId/messages
+router.post(
+  "/:teamId/messages",
+  requireStudentAuth,
+  body("content").notEmpty().withMessage("Message content is required").isLength({ max: 2000 }).withMessage("Message exceeds maximum length"),
+  runValidation,
+  sanitizeBody(["content"]),
+  createTeamMessage
+);
 
 // GET /api/teams/:teamId/matching-students
 router.get("/:teamId/matching-students", requireStudentAuth, getMatchingStudents);

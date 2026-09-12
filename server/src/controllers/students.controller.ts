@@ -43,9 +43,12 @@ const usnUpper = (usn || "").toUpperCase();
       throw new HttpError(409, "This email is already registered.");
     }
 
-    const existingPhone = await prisma.student.findFirst({ where: { phone: phoneTrimmed } });
-    if (existingPhone) {
-      throw new HttpError(409, "This mobile number is already registered.");
+    let existingPhone = null;
+    if (phoneTrimmed) {
+      existingPhone = await prisma.student.findFirst({ where: { phone: phoneTrimmed } });
+      if (existingPhone) {
+        throw new HttpError(409, "This mobile number is already registered.");
+      }
     }
 
     // Hash the password only if provided (keeps backward compatibility for existing flows).
@@ -55,21 +58,21 @@ const usnUpper = (usn || "").toUpperCase();
       passwordHash = await bcrypt.hash(password, 12);
     }
 
-const student = await prisma.student.create({
+    const student = await prisma.student.create({
       data: {
         name,
         usn: usnUpper,
-        section: section.toUpperCase(),
-        branch,
-        year,
-        semester: parseInt(semester, 10),
-        phone,
+        section: section ? section.toUpperCase() : null,
+        branch: branch || null,
+        year: year || null,
+        semester: semester ? parseInt(semester, 10) : null,
+        phone: phoneTrimmed || null,
         email: email.toLowerCase(),
         linkedin: linkedin || null,
         github: github || null,
         portfolio: portfolio || null,
-        favoriteDomain,
-        skills,
+        favoriteDomain: favoriteDomain || null,
+        skills: skills || null,
         bio: bio || null,
         photo: photo || null,
         passwordHash,
@@ -203,22 +206,22 @@ const {
       throw new HttpError(409, `Another student already uses this ${field}`);
     }
 
-    const updated = await prisma.student.update({
+      const updated = await prisma.student.update({
       where: { id },
       data: {
         name,
         usn: usnUpper,
-        section: section.toUpperCase(),
-        branch,
-        year,
-        semester: parseInt(semester, 10),
-        phone,
+        section: section ? section.toUpperCase() : null,
+        branch: branch || null,
+        year: year || null,
+        semester: semester ? parseInt(semester, 10) : null,
+        phone: phone || null,
         email: emailLower,
         linkedin: linkedin || null,
         github: github || null,
         portfolio: portfolio || null,
-        favoriteDomain,
-        skills,
+        favoriteDomain: favoriteDomain || null,
+        skills: skills || null,
         bio: bio || null,
         photo: photo ?? existing.photo,
       },
@@ -304,8 +307,8 @@ export async function getFilterOptions(req: Request, res: Response, next: NextFu
     res.json({
       success: true,
       data: {
-        sections: sections.map((s: { section: string }) => s.section).sort(),
-        domains: domains.map((d: { favoriteDomain: string }) => d.favoriteDomain).sort(),
+        sections: sections.map((s: { section: string | null }) => s.section).filter(Boolean).sort(),
+        domains: domains.map((d: { favoriteDomain: string | null }) => d.favoriteDomain).filter(Boolean).sort(),
       },
     });
   } catch (err) {

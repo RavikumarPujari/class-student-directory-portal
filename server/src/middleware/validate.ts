@@ -67,46 +67,40 @@ export const studentValidationRules: ValidationChain[] = [
     .withMessage("Enter a valid USN (letters/numbers, 6-15 characters)"),
 
   body("section")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Section is required")
     .isLength({ max: 10 })
     .withMessage("Section is too long"),
 
   body("branch")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Branch is required")
     .isIn(BRANCH_OPTIONS)
     .withMessage("Please select a valid branch"),
 
   body("year")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Year is required")
     .isIn(YEAR_OPTIONS)
     .withMessage("Please select a valid year"),
 
   body("semester")
-    .notEmpty()
-    .withMessage("Semester is required")
+    .optional({ checkFalsy: true })
     .isInt({ min: 1, max: 8 })
     .withMessage("Semester must be between 1 and 8"),
 
   body("phone")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Phone number is required")
     .matches(PHONE_REGEX)
-    .withMessage("Enter a valid phone number (7-15 digits, optional +)"),
+    .withMessage("Enter a valid phone number"),
 
   body("email")
     .trim()
     .notEmpty()
     .withMessage("Email is required")
     .isEmail()
-    .withMessage("Enter a valid email address")
-    .normalizeEmail(),
+    .withMessage("Enter a valid email address"),
 
   body("linkedin")
     .optional({ checkFalsy: true })
@@ -124,17 +118,17 @@ export const studentValidationRules: ValidationChain[] = [
     .optional({ checkFalsy: true })
     .trim()
     .matches(URL_REGEX)
-    .withMessage("Enter a valid portfolio URL"),
+    .withMessage("Enter a valid URL"),
 
   body("favoriteDomain")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Favorite domain is required"),
+    .isLength({ max: 100 }),
 
   body("skills")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("At least one skill is required"),
+    .isLength({ max: 200 }),
 
   body("bio")
     .optional({ checkFalsy: true })
