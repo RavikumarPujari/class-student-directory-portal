@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import "dotenv/config";
 
@@ -10,6 +11,9 @@ import dashboardRoutes from "./routes/dashboard.routes";
 import studentAuthRoutes from "./routes/studentAuth.routes";
 import teamsRoutes from "./routes/teams.routes";
 import teamInvitationsRoutes from "./routes/teamInvitations.routes";
+import notificationsRoutes from "./routes/notifications.routes";
+import adminTeamsRoutes from "./routes/adminTeams.routes";
+import governmentRoutes from "./routes/government.routes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { apiLimiter } from "./middleware/rateLimiter";
 
@@ -17,6 +21,7 @@ const app = express();
 
 // --- Security & core middleware ---
 app.use(helmet());
+app.use(cookieParser());
 app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
@@ -44,6 +49,9 @@ app.use("/api/students/auth", studentAuthRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/teams", teamsRoutes);
 app.use("/api/team-invitations", teamInvitationsRoutes);
+app.use("/api/notifications", notificationsRoutes);
+app.use("/api/admin/teams", adminTeamsRoutes);
+app.use("/api/government", governmentRoutes);
 
 // --- 404 + error handling (must be last) ---
 app.use(notFoundHandler);

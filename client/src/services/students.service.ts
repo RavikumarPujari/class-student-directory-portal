@@ -109,3 +109,5 @@ export async function downloadExport(format: "csv" | "excel"): Promise<void> {
  link.remove();
  window.URL.revokeObjectURL(url);
 }
+
+export async function logoutStudent() { await api.post("/students/auth/logout"); }

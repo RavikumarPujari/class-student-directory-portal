@@ -9,6 +9,40 @@ interface SendInvitationEmailParams {
   token: string;
 }
 
+const getTransporter = () => {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || "587", 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const secure = process.env.SMTP_SECURE === "true" || port === 465;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass }
+  });
+};
+
+export async function verifyEmailConfiguration() {
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.warn("SMTP email service is not configured (missing SMTP_HOST, SMTP_USER, or SMTP_PASS). Emails will be skipped safely.");
+    return;
+  }
+  
+  try {
+    await transporter.verify();
+    console.log("SMTP email service configured successfully");
+  } catch (err) {
+    console.warn("SMTP email service configuration failed:", err);
+  }
+}
+
 export async function sendTeamInvitationEmail({
   toEmail,
   studentName,
@@ -17,54 +51,46 @@ export async function sendTeamInvitationEmail({
   description,
   token
 }: SendInvitationEmailParams) {
-  const host = process.env.EMAIL_HOST;
-  const port = parseInt(process.env.EMAIL_PORT || "587", 10);
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASSWORD;
-  const from = process.env.EMAIL_FROM || "noreply@studentportal.com";
+  const transporter = getTransporter();
+  const from = process.env.SMTP_FROM || "Class Student Directory <noreply@studentportal.com>";
   const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:5173";
 
   // If no credentials are provided, safely log in development instead of throwing/pretending.
-  if (!host || !user || !pass) {
+  if (!transporter) {
     console.log("=========================================");
     console.log("EMAIL SERVICE DISABLED: Missing credentials.");
     console.log(`Would have sent invitation to: ${toEmail}`);
     console.log(`Team: ${teamName} (Leader: ${leaderName})`);
-    console.log(`Accept Link: ${appBaseUrl}/teams/invitation/accept?token=${token}`);
+    console.log(`Accept Link: ${appBaseUrl}/student/teams/invitations`);
     console.log("=========================================");
     return true; 
   }
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass }
-  });
-
-  const acceptUrl = `${appBaseUrl}/teams/invitation/accept?token=${token}`;
-  const declineUrl = `${appBaseUrl}/teams/invitation/decline?token=${token}`;
+  const loginUrl = `${appBaseUrl}/student/login`;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-w-md: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #0f766e;">Team Invitation</h2>
-      <p>Hi ${studentName},</p>
-      <p><strong>${leaderName}</strong> has invited you to join their team: <strong>${teamName}</strong>.</p>
-      ${description ? `<blockquote style="border-left: 4px solid #0f766e; padding-left: 10px; color: #555;">${description}</blockquote>` : ""}
-      <p>Click below to respond to this invitation:</p>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+      <h2 style="color: #0f766e;">New Team Invitation — ${teamName}</h2>
+      <p>Hello ${studentName},</p>
+      <p>You have received a new invitation to join:</p>
+      <p><strong>${teamName}</strong></p>
+      <p>Invited by:<br/><strong>${leaderName}</strong></p>
+      ${description ? `<p>Required skills:<br/><strong>${description}</strong></p>` : ""}
+      <p>Please sign in to your Class Student Directory account to view the invitation and choose:</p>
+      <p><strong>Accept</strong><br/>or<br/><strong>Decline</strong></p>
       <div style="margin: 20px 0;">
-        <a href="${acceptUrl}" style="background-color: #0f766e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-right: 10px;">Accept Invitation</a>
-        <a href="${declineUrl}" style="background-color: #ef4444; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Decline</a>
+        <a href="${loginUrl}" style="background-color: #0f766e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Invitation</a>
       </div>
-      <p style="font-size: 12px; color: #888;">This link will expire in 7 days.</p>
+      <p>Regards,</p>
+      <p>Class Student Directory</p>
     </div>
   `;
 
   try {
     await transporter.sendMail({
-      from: `Student Portal <${from}>`,
+      from,
       to: toEmail,
-      subject: `You've been invited to join ${teamName}`,
+      subject: `New Team Invitation — ${teamName}`,
       html
     });
     return true;

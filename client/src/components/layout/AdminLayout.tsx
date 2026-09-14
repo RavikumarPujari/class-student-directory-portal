@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import {
  LayoutDashboard,
  Users,
  LogOut,
  GraduationCap,
  Menu,
+ X
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
-const navItems = [
+const navItemsBase = [
  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
  { to: "/admin/students", label: "Students", icon: Users },
 ];
@@ -23,90 +25,108 @@ export function AdminLayout() {
  const [sidebarOpen, setSidebarOpen] = useState(false);
 
  function handleLogout() {
- logout();
- toast({ title: "Logged out", description: "See you next time!", variant: "default" });
- navigate("/admin/login");
+   logout();
+   toast({ title: "Logged out", description: "See you next time!", variant: "default" });
+   navigate("/admin/login");
  }
+
+ const navItems = admin?.role === 'government' 
+   ? [{ to: '/government/dashboard', label: 'Dashboard', icon: LayoutDashboard }] 
+   : navItemsBase;
 
  const SidebarContent = (
- <div className="flex h-full flex-col">
- <div className="flex items-center gap-2 px-6 py-6 font-display text-lg font-bold">
- <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-gold-dark text-navy">
- <GraduationCap className="h-5 w-5" />
- </span>
- Admin<span className="text-gradient-gold">Panel</span>
- </div>
+   <div className="flex h-full w-full flex-col items-center py-6 bg-navy/80 backdrop-blur-md border-r border-border/50">
+     <Link to="/" onClick={() => setSidebarOpen(false)} className="mb-8 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-gold-dark text-navy hover:scale-105 transition-transform" title="Home">
+       <GraduationCap className="h-6 w-6" />
+     </Link>
 
- <nav className="flex-1 space-y-1 px-3">
- {navItems.map((item) => (
- <NavLink
- key={item.to}
- to={item.to}
- onClick={() => setSidebarOpen(false)}
- className={({ isActive }) =>
- cn(
- "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors",
- isActive
- ? "bg-gold/10 text-gold border border-gold/20"
- : "text-muted-foreground hover:bg-muted hover:text-foreground"
- )
- }
- >
- <item.icon className="h-4 w-4" />
- {item.label}
- </NavLink>
- ))}
- </nav>
+     <nav className="flex flex-col gap-4 flex-1 w-full px-3">
+       {navItems.map((item) => (
+         <NavLink
+           key={item.to}
+           to={item.to}
+           onClick={() => setSidebarOpen(false)}
+           title={item.label}
+           className={({ isActive }) =>
+             cn(
+               "flex h-10 w-10 items-center justify-center rounded-xl mx-auto transition-all",
+               isActive
+                 ? "bg-gold/15 text-gold border border-gold/30 shadow-[0_0_15px_rgba(212,175,55,0.15)]"
+                 : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+             )
+           }
+         >
+           <item.icon className="h-5 w-5" />
+         </NavLink>
+       ))}
+     </nav>
 
- <div className="border-t border-border p-4">
- <div className="mb-3 flex items-center gap-3 rounded-xl bg-card px-3 py-2">
- <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal/30 to-gold/20 font-display text-sm font-bold text-teal-light">
- {admin?.name?.charAt(0) || "A"}
- </div>
- <div className="min-w-0">
- <p className="truncate text-sm font-medium">{admin?.name || "Administrator"}</p>
- <p className="truncate text-xs text-muted-foreground">{admin?.email}</p>
- </div>
- </div>
- <button
- onClick={handleLogout}
- className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400"
- >
- <LogOut className="h-4 w-4" />
- Logout
- </button>
- </div>
- </div>
+     <div className="flex flex-col items-center gap-4 mt-auto w-full px-3">
+       <button
+         onClick={handleLogout}
+         title="Sign Out"
+         className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors"
+       >
+         <LogOut className="h-5 w-5" />
+       </button>
+     </div>
+   </div>
  );
 
  return (
- <div className="min-h-screen bg-background">
- {/* Desktop sidebar */}
- <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-border bg-navy-light/60 lg:block">
- {SidebarContent}
- </aside>
+   <div className="flex min-h-screen bg-background flex-col md:flex-row">
+     {/* Desktop fixed sidebar */}
+     <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col lg:flex">
+       {SidebarContent}
+     </aside>
 
- {/* Mobile sidebar */}
- {sidebarOpen && (
- <div className="fixed inset-0 z-50 lg:hidden">
- <div className="absolute inset-0 bg-card" onClick={() => setSidebarOpen(false)} />
- <aside className="absolute inset-y-0 left-0 w-64 bg-navy-light border-r border-border">
- {SidebarContent}
- </aside>
- </div>
- )}
+     {/* Mobile top bar */}
+     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-navy/70 px-4 lg:hidden backdrop-blur-md">
+       <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
+         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-gold-dark text-navy">
+           <GraduationCap className="h-5 w-5" />
+         </span>
+         <span>AdminPanel</span>
+       </Link>
+       
+       <button
+         className="rounded-lg p-2 text-foreground"
+         onClick={() => setSidebarOpen(true)}
+         aria-label="Open menu"
+       >
+         <Menu className="h-6 w-6" />
+       </button>
+     </header>
 
- <div className="lg:pl-64">
- <header className="flex h-16 items-center justify-between border-b border-border bg-navy/70 px-4 lg:hidden">
- <span className="font-display font-bold">AdminPanel</span>
- <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2">
- <Menu className="h-6 w-6" />
- </button>
- </header>
- <main className="p-4 md:p-8">
- <Outlet />
- </main>
- </div>
- </div>
+     {/* Mobile Slide-out Drawer */}
+     <AnimatePresence>
+       {sidebarOpen && (
+         <div className="fixed inset-0 z-50 lg:hidden">
+           <motion.div
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             exit={{ opacity: 0 }}
+             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+             onClick={() => setSidebarOpen(false)}
+           />
+           <motion.aside
+             initial={{ x: "-100%" }}
+             animate={{ x: 0 }}
+             exit={{ x: "-100%" }}
+             transition={{ type: "spring", damping: 25, stiffness: 200 }}
+             className="absolute inset-y-0 left-0 w-16 shadow-2xl"
+           >
+             {SidebarContent}
+           </motion.aside>
+         </div>
+       )}
+     </AnimatePresence>
+
+     <div className="flex-1 lg:pl-16 flex flex-col min-h-screen">
+       <main className="flex-1 p-4 md:p-8">
+         <Outlet />
+       </main>
+     </div>
+   </div>
  );
 }

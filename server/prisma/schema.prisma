@@ -33,6 +33,8 @@ model Student {
   teamMemberships  TeamMember[]     @relation("StudentMemberships")
   teamInvitations  TeamInvitation[] @relation("StudentInvitations")
   sentTeamMessages TeamMessage[]    @relation("StudentTeamMessages")
+  aiMessages       TeamAIMessage[]  @relation("StudentAIMessages")
+  notifications    Notification[]   @relation("StudentNotifications")
 
   @@map("students")
 }
@@ -42,6 +44,7 @@ model Admin {
   email        String   @unique
   passwordHash String   @map("password_hash")
   name         String   @default("Administrator")
+  role         String   @default("admin") // admin or government
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("admins")
@@ -53,20 +56,31 @@ enum InvitationStatus {
   DECLINED
 }
 
+enum TeamApprovalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
 model Team {
-  id             String   @id @default(cuid())
+  id             String             @id @default(cuid())
   name           String
   description    String?
-  requiredSkills String?  @map("required_skills")
-  leaderId       String   @map("leader_id")
-  maxSize        Int      @default(5) @map("max_size")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  requiredSkills String?            @map("required_skills")
+  leaderId       String             @map("leader_id")
+  maxSize        Int                @default(5) @map("max_size")
+  approvalStatus TeamApprovalStatus @default(APPROVED) @map("approval_status")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
-  leader      Student          @relation("TeamLeader", fields: [leaderId], references: [id])
-  members     TeamMember[]     @relation("TeamMembers")
-  invitations TeamInvitation[] @relation("TeamInvitations")
-  messages    TeamMessage[]    @relation("TeamMessages")
+  leader             Student          @relation("TeamLeader", fields: [leaderId], references: [id])
+  members            TeamMember[]     @relation("TeamMembers")
+  invitations        TeamInvitation[] @relation("TeamInvitations")
+  messages           TeamMessage[]    @relation("TeamMessages")
+  aiMessages         TeamAIMessage[]  @relation("TeamAIMessages")
+  roadmap            Json?
+  roadmapGeneratedAt DateTime?        @map("roadmap_generated_at")
 
   @@map("teams")
 }
@@ -76,8 +90,8 @@ model TeamMember {
   studentId String   @map("student_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  team      Team     @relation("TeamMembers", fields: [teamId], references: [id])
-  student   Student  @relation("StudentMemberships", fields: [studentId], references: [id])
+  team    Team    @relation("TeamMembers", fields: [teamId], references: [id], onDelete: Cascade)
+  student Student @relation("StudentMemberships", fields: [studentId], references: [id])
 
   @@unique([teamId, studentId])
   @@map("team_members")
@@ -93,8 +107,8 @@ model TeamInvitation {
   createdAt DateTime         @default(now()) @map("created_at")
   updatedAt DateTime         @updatedAt @map("updated_at")
 
-  team      Team     @relation("TeamInvitations", fields: [teamId], references: [id])
-  student   Student  @relation("StudentInvitations", fields: [studentId], references: [id])
+  team    Team    @relation("TeamInvitations", fields: [teamId], references: [id], onDelete: Cascade)
+  student Student @relation("StudentInvitations", fields: [studentId], references: [id])
 
   @@map("team_invitations")
 }
@@ -107,10 +121,66 @@ model TeamMessage {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  team      Team     @relation("TeamMessages", fields: [teamId], references: [id], onDelete: Cascade)
-  sender    Student  @relation("StudentTeamMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  team   Team    @relation("TeamMessages", fields: [teamId], references: [id], onDelete: Cascade)
+  sender Student @relation("StudentTeamMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
   @@index([createdAt])
   @@map("team_messages")
+}
+
+enum NotificationType {
+  TEAM_INVITATION
+  INVITATION_ACCEPTED
+  INVITATION_DECLINED
+  TEAM_MEMBER_JOINED
+  TEAM_MESSAGE
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  recipientId String           @map("recipient_id")
+  type        NotificationType
+  title       String
+  message     String
+  referenceId String?          @map("reference_id")
+  isRead      Boolean          @default(false) @map("is_read")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  recipient Student @relation("StudentNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId])
+  @@index([createdAt])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+model AccessLog {
+  id        String   @id @default(cuid())
+  actorId   String   @map("actor_id")
+  actorRole String   @map("actor_role")
+  targetId  String?  @map("target_id")
+  action    String
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("access_logs")
+}
+
+model TeamAIMessage {
+  id               String   @id @default(cuid())
+  teamId           String   @map("team_id")
+  askedByStudentId String   @map("asked_by_student_id")
+  question         String
+  answer           String   @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  team    Team    @relation("TeamAIMessages", fields: [teamId], references: [id], onDelete: Cascade)
+  student Student @relation("StudentAIMessages", fields: [askedByStudentId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([createdAt])
+  @@map("team_ai_messages")
 }

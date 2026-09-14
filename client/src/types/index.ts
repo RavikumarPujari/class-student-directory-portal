@@ -56,6 +56,7 @@ export interface Admin {
  id: string;
  email: string;
  name: string;
+ role: "admin" | "government";
 }
 
 export interface ChartDatum {
@@ -75,3 +76,5 @@ export interface ApiEnvelope<T> {
  message?: string;
  data: T;
 }
+
+

@@ -13,12 +13,11 @@ export function requireAuth(
   next: NextFunction
 ) {
   const header = req.headers.authorization;
+  const token = (req.cookies && req.cookies.token) || (header && header.startsWith("Bearer ") ? header.split(" ")[1] : null);
 
-  if (!header || !header.startsWith("Bearer ")) {
+  if (!token) {
     return res.status(401).json({ success: false, message: "Authentication required" });
   }
-
-  const token = header.split(" ")[1];
 
   try {
     const payload = verifyToken(token);
@@ -41,12 +40,11 @@ export function requireStudentAuth(
   next: NextFunction
 ) {
   const header = req.headers.authorization;
+  const token = (req.cookies && req.cookies.token) || (header && header.startsWith("Bearer ") ? header.split(" ")[1] : null);
 
-  if (!header || !header.startsWith("Bearer ")) {
+  if (!token) {
     return res.status(401).json({ success: false, message: "Authentication required" });
   }
-
-  const token = header.split(" ")[1];
 
   try {
     const payload = verifyToken(token);
@@ -54,6 +52,53 @@ export function requireStudentAuth(
       return res.status(403).json({ success: false, message: "Student access required" });
     }
     req.student = payload;
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
+}
+export function requireAnyAuth(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const header = req.headers.authorization;
+  const token = (req.cookies && req.cookies.token) || (header && header.startsWith("Bearer ") ? header.split(" ")[1] : null);
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+
+  try {
+    const payload = verifyToken(token);
+    if (payload.role === "student" && payload.studentId) {
+      req.student = payload;
+    } else {
+      req.admin = payload;
+    }
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
+}
+export function requireGovernmentAuth(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const header = req.headers.authorization;
+  const token = (req.cookies && req.cookies.token) || (header && header.startsWith("Bearer ") ? header.split(" ")[1] : null);
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+
+  try {
+    const payload = verifyToken(token);
+    if (payload.role !== "government") {
+      return res.status(403).json({ success: false, message: "Government access required" });
+    }
+    req.admin = payload; // Can share the admin property for simplicity, or add government property.
     next();
   } catch {
     return res.status(401).json({ success: false, message: "Invalid or expired token" });

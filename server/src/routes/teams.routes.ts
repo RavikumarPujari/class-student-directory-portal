@@ -1,10 +1,23 @@
 import { Router } from "express";
 import { body } from "express-validator";
-import { createTeam, getMyTeams, getTeam, getTeamMessages, createTeamMessage } from "../controllers/teams.controller";
+import { 
+  createTeam, 
+  getMyTeams, 
+  getTeam, 
+  getTeamMessages, 
+  createTeamMessage, 
+  submitTeam,
+  deleteTeam,
+  removeMember,
+  getAllApprovedTeams,
+  requestToJoinTeam
+} from "../controllers/teams.controller";
 import { getMatchingStudents } from "../controllers/matching.controller";
+import { generateTeamRoadmap, askTeamAI, getTeamAIMessages } from "../controllers/ai.controller";
 import { createInvitation, getTeamInvitations } from "../controllers/invitations.controller";
 import { requireStudentAuth } from "../middleware/auth.middleware";
 import { runValidation, sanitizeBody } from "../middleware/validate";
+import { messageLimiter, roadmapLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
@@ -35,6 +48,9 @@ export const teamValidationRules = [
     .toInt()
 ];
 
+// GET /api/teams (Public Directory Listing for Students)
+router.get("/", requireStudentAuth, getAllApprovedTeams);
+
 // POST /api/teams
 router.post(
   "/",
@@ -51,6 +67,12 @@ router.get("/me", requireStudentAuth, getMyTeams);
 // GET /api/teams/:teamId
 router.get("/:teamId", requireStudentAuth, getTeam);
 
+// DELETE /api/teams/:teamId
+router.delete("/:teamId", requireStudentAuth, deleteTeam);
+
+// DELETE /api/teams/:teamId/members/:targetStudentId
+router.delete("/:teamId/members/:targetStudentId", requireStudentAuth, removeMember);
+
 // GET /api/teams/:teamId/messages
 router.get("/:teamId/messages", requireStudentAuth, getTeamMessages);
 
@@ -58,6 +80,7 @@ router.get("/:teamId/messages", requireStudentAuth, getTeamMessages);
 router.post(
   "/:teamId/messages",
   requireStudentAuth,
+  messageLimiter,
   body("content").notEmpty().withMessage("Message content is required").isLength({ max: 2000 }).withMessage("Message exceeds maximum length"),
   runValidation,
   sanitizeBody(["content"]),
@@ -66,6 +89,17 @@ router.post(
 
 // GET /api/teams/:teamId/matching-students
 router.get("/:teamId/matching-students", requireStudentAuth, getMatchingStudents);
+
+// POST /api/teams/:teamId/submit
+router.post("/:teamId/submit", requireStudentAuth, submitTeam);
+
+// POST /api/teams/:teamId/requests
+router.post("/:teamId/requests", requireStudentAuth, requestToJoinTeam);
+
+// POST /api/teams/:teamId/ai-plan
+router.post("/:teamId/roadmap", requireStudentAuth, roadmapLimiter, generateTeamRoadmap);
+router.post("/:teamId/ask-ai", requireStudentAuth, roadmapLimiter, askTeamAI);
+router.get("/:teamId/ask-ai", requireStudentAuth, getTeamAIMessages);
 
 // POST /api/teams/:teamId/invitations
 router.post(

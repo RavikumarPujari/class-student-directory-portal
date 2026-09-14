@@ -91,7 +91,10 @@ export async function acceptInvitation(req: AuthenticatedRequest, res: Response,
       // Re-verify capacity in lock
       const team = await tx.team.findUnique({
         where: { id: invitation.teamId },
-        include: { _count: { select: { members: true } } }
+        include: { 
+          _count: { select: { members: true } },
+          members: true
+        }
       });
 
       if (!team) throw new HttpError(404, "Team no longer exists");
@@ -119,6 +122,38 @@ export async function acceptInvitation(req: AuthenticatedRequest, res: Response,
         where: { id: invitation.id },
         data: { status: "ACCEPTED" }
       });
+
+      const joiningStudent = await tx.student.findUnique({
+        where: { id: studentId }
+      });
+
+      // 3. Notify Leader
+      if (team.leaderId !== studentId) {
+        await tx.notification.create({
+          data: {
+            recipientId: team.leaderId,
+            type: "INVITATION_ACCEPTED",
+            title: "Invitation Accepted",
+            message: `${joiningStudent?.name} accepted your invitation to ${team.name}.`,
+            referenceId: team.id
+          }
+        });
+      }
+
+      // 4. Notify other members
+      for (const member of team.members) {
+        if (member.studentId !== studentId && member.studentId !== team.leaderId) {
+          await tx.notification.create({
+            data: {
+              recipientId: member.studentId,
+              type: "TEAM_MEMBER_JOINED",
+              title: "New Team Member",
+              message: `${joiningStudent?.name} joined ${team.name}.`,
+              referenceId: team.id
+            }
+          });
+        }
+      }
     });
 
     res.json({ success: true, message: "Invitation accepted successfully" });
@@ -163,9 +198,31 @@ export async function declineInvitation(req: AuthenticatedRequest, res: Response
       throw new HttpError(400, "Invitation has expired");
     }
 
-    await prisma.teamInvitation.update({
-      where: { id: invitation.id },
-      data: { status: "DECLINED" }
+    await prisma.$transaction(async (tx) => {
+      await tx.teamInvitation.update({
+        where: { id: invitation.id },
+        data: { status: "DECLINED" }
+      });
+
+      const team = await tx.team.findUnique({
+        where: { id: invitation.teamId }
+      });
+      
+      const decliningStudent = await tx.student.findUnique({
+        where: { id: studentId }
+      });
+
+      if (team && decliningStudent) {
+        await tx.notification.create({
+          data: {
+            recipientId: team.leaderId,
+            type: "INVITATION_DECLINED",
+            title: "Invitation Declined",
+            message: `${decliningStudent.name} declined your invitation to ${team.name}.`,
+            referenceId: team.id
+          }
+        });
+      }
     });
 
     res.json({ success: true, message: "Invitation declined successfully" });

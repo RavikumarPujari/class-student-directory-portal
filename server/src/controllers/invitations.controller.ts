@@ -100,6 +100,16 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response,
         }
       });
 
+      await tx.notification.create({
+        data: {
+          recipientId: targetStudentId,
+          type: "TEAM_INVITATION",
+          title: "New Team Invitation",
+          message: `You have been invited to join ${team.name}.`,
+          referenceId: team.id
+        }
+      });
+
       return {
         newInvite,
         team,
@@ -110,14 +120,19 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response,
     });
 
     // Send email asynchronously outside the transaction to prevent holding the DB lock
-    await sendTeamInvitationEmail({
-      toEmail: invitation.targetEmail,
-      studentName: invitation.targetName,
-      teamName: invitation.team.name,
-      leaderName: invitation.leaderName,
-      description: invitation.team.description || "",
-      token: invitation.newInvite.token
-    });
+    try {
+      await sendTeamInvitationEmail({
+        toEmail: invitation.targetEmail,
+        studentName: invitation.targetName,
+        teamName: invitation.team.name,
+        leaderName: invitation.leaderName,
+        description: invitation.team.description || "",
+        token: invitation.newInvite.token
+      });
+    } catch (emailErr) {
+      console.error("Invitation created but email delivery failed.", emailErr);
+      // We do not fail the request; the invitation is already safely created in DB.
+    }
 
     res.status(201).json({
       success: true,

@@ -70,7 +70,7 @@ export function calculateMatch(
   // If a team has no required skills, technically anyone is a 0% "match" to specific skills.
   const matchPercentage = requiredSkillCount === 0 
     ? 0 
-    : Math.round((matchCount / requiredSkillCount) * 1000) / 10;
+    : Math.round((matchCount / requiredSkillCount) * 100);
   
   return {
     student,

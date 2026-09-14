@@ -12,18 +12,20 @@ import {
   checkEmail,
 } from "../controllers/students.controller";
 import { studentValidationRules, runValidation, sanitizeBody } from "../middleware/validate";
-import { requireAuth } from "../middleware/auth.middleware";
+import { requireAuth, requireAnyAuth } from "../middleware/auth.middleware";
 import { writeLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
 const sanitizedFields = ["name", "section", "bio", "favoriteDomain", "skills"];
 
-// Public routes
-router.get("/meta/filters", getFilterOptions);
+// Public routes (Registration check)
 router.get("/check-email", checkEmail);
-router.get("/", getStudents);
-router.get("/:id", getStudentById);
+
+// Protected Directory (Admin or Student)
+router.get("/meta/filters", requireAnyAuth, getFilterOptions);
+router.get("/", requireAnyAuth, getStudents);
+router.get("/:id", requireAnyAuth, getStudentById);
 
 router.post(
   "/",

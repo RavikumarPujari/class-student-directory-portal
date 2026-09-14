@@ -21,7 +21,14 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       throw new HttpError(401, "Invalid email or password");
     }
 
-    const token = signToken({ adminId: admin.id, email: admin.email });
+    const token = signToken({ adminId: admin.id, email: admin.email, role: admin.role as "admin" | "government" });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
 
     res.json({
       success: true,
@@ -48,4 +55,9 @@ export async function me(req: Request, res: Response, next: NextFunction) {
   } catch (err) {
     next(err);
   }
+}
+
+export async function adminLogout(req: Request, res: Response, next: NextFunction) {
+  res.clearCookie("token");
+  res.json({ success: true, message: "Logged out" });
 }

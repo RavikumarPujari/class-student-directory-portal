@@ -25,6 +25,12 @@ export async function getMatchingStudents(req: AuthenticatedRequest, res: Respon
 
     if (!team) throw new HttpError(404, "Team not found");
     if (team.leaderId !== leaderId) throw new HttpError(403, "Only the team leader can access matching recommendations");
+    if (!team.requiredSkills || team.requiredSkills.trim() === "") throw new HttpError(400, "Team has no required skills to match against");
+
+    const currentCapacity = team.members.length + team.invitations.length;
+    if (currentCapacity >= team.maxSize) {
+      throw new HttpError(400, "Team is at maximum capacity (including pending invitations). Cannot invite more students.");
+    }
 
     const excludedStudentIds = new Set<string>();
     excludedStudentIds.add(leaderId);
@@ -33,7 +39,10 @@ export async function getMatchingStudents(req: AuthenticatedRequest, res: Respon
     // Annotate pending invitations
     const pendingInvitationMap = new Map<string, string>();
     team.invitations.forEach(inv => {
-      pendingInvitationMap.set(inv.studentId, inv.status);
+      if (inv.status === "PENDING") {
+        pendingInvitationMap.set(inv.studentId, inv.status);
+        excludedStudentIds.add(inv.studentId); // Exclude from being recommended again
+      }
     });
 
     // Optional filters matching directory architecture
@@ -96,7 +105,10 @@ export async function getMatchingStudents(req: AuthenticatedRequest, res: Respon
     // We can slice to top 50 to avoid sending too much data
     const topMatches = matches.slice(0, 50);
 
-    res.json(topMatches);
+    res.json({
+      success: true,
+      data: topMatches
+    });
   } catch (error) {
     next(error);
   }

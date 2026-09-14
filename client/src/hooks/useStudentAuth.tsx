@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { Student } from "@/types";
-import { loginStudent, fetchMyStudentProfile } from "@/services/students.service";
+import { loginStudent, fetchMyStudentProfile, logoutStudent } from "@/services/students.service";
 
 interface StudentAuthContextValue {
  student: Student | null;
@@ -36,6 +36,7 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
  const studentLogout = useCallback(() => {
  localStorage.removeItem("student_token");
  localStorage.removeItem("student_info");
+    logoutStudent().catch(() => {});
  setStudent(null);
  }, []);
 

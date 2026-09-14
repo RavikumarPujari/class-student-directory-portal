@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../config/prisma";
 import { HttpError } from "../middleware/errorHandler";
 import { studentsToCsv, studentsToExcelBuffer } from "../utils/export";
+import { logAccess } from "../utils/audit";
 
 // POST /students — public self-registration endpoint
 export async function createStudent(req: Request, res: Response, next: NextFunction) {
@@ -106,6 +107,10 @@ export async function getStudents(req: Request, res: Response, next: NextFunctio
 
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 9));
+
+    if ((req as any).admin) {
+      await logAccess(req, "list_students");
+    }
 
     const where: Prisma.StudentWhereInput = {
       AND: [
@@ -271,8 +276,10 @@ export async function clearAllStudents(req: Request, res: Response, next: NextFu
 // GET /students/export/csv — protected (admin only)
 export async function exportCsv(req: Request, res: Response, next: NextFunction) {
   try {
+    await logAccess(req, "export_csv");
     const students = await prisma.student.findMany({ orderBy: { createdAt: "desc" } });
-    const csv = studentsToCsv(students);
+    const safeStudents = students.map(({ passwordHash: _ph, ...rest }) => rest);
+    const csv = studentsToCsv(safeStudents as any);
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", `attachment; filename="students-${Date.now()}.csv"`);
     res.status(200).send(csv);
@@ -281,11 +288,13 @@ export async function exportCsv(req: Request, res: Response, next: NextFunction)
   }
 }
 
-// GET /students/export/excel — protected (admin only)
+// GET /students/export/excel - protected (admin only)
 export async function exportExcel(req: Request, res: Response, next: NextFunction) {
   try {
+    await logAccess(req, "export_excel");
     const students = await prisma.student.findMany({ orderBy: { createdAt: "desc" } });
-    const buffer = await studentsToExcelBuffer(students);
+    const safeStudents = students.map(({ passwordHash: _ph, ...rest }) => rest);
+    const buffer = await studentsToExcelBuffer(safeStudents as any);
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

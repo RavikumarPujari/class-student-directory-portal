@@ -22,11 +22,13 @@ import { fetchDashboardStats } from "@/services/auth.service";
 import { downloadExport } from "@/services/students.service";
 import { useToast } from "@/hooks/useToast";
 import { DashboardStats } from "@/types";
+import { TeamApprovalsTab } from "@/components/admin/TeamApprovalsTab";
 
 const COLORS = ["#D4AF37", "#2DD4BF", "#E8C965", "#5EEAD4", "#B8952E", "#0F766E"];
 
 export function AdminDashboard() {
- const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "approvals">("overview");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
  const [loading, setLoading] = useState(true);
  const [exporting, setExporting] = useState<"csv" | "excel" | null>(null);
  const [now, setNow] = useState<Date>(() => new Date());
@@ -106,6 +108,13 @@ export function AdminDashboard() {
  </div>
  </motion.div>
 
+ <div className="flex gap-4 border-b border-border pb-2">
+ <Button variant={activeTab === "overview" ? "default" : "ghost"} onClick={() => setActiveTab("overview")}>Overview</Button>
+ <Button variant={activeTab === "approvals" ? "default" : "ghost"} onClick={() => setActiveTab("approvals")}>Team Approvals</Button>
+ </div>
+
+ {activeTab === "approvals" ? <TeamApprovalsTab /> : (
+ <>
  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
  <StatCard label="Total Students" value={stats?.totalStudents ?? 0} icon={Users} accent="gold" index={0} />
  <StatCard
@@ -233,6 +242,8 @@ export function AdminDashboard() {
  )}
  </CardContent>
  </Card>
+ </>
+ )}
  </div>
  );
 }

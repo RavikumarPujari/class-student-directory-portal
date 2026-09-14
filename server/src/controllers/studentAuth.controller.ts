@@ -40,6 +40,13 @@ const student = await prisma.student.findUnique({
       role: "student",
     });
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+
     res.json({ success: true, message: "Login successful", token });
   } catch (err) {
     next(err);
@@ -152,4 +159,9 @@ export async function deleteMe(req: AuthenticatedRequest, res: Response, next: N
   } catch (err) {
     next(err);
   }
+}
+
+export async function studentLogout(req: Request, res: Response, next: NextFunction) {
+  res.clearCookie("token");
+  res.json({ success: true, message: "Logged out" });
 }

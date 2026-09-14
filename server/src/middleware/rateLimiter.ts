@@ -44,3 +44,25 @@ export const writeLimiter = rateLimit({
     message: "Too many submissions from this device. Please try again later.",
   },
 });
+export const messageLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20, // 20 messages per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many messages sent. Please slow down.",
+  },
+});
+
+export const roadmapLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many roadmap generations. Please try again in an hour.",
+  },
+});
+

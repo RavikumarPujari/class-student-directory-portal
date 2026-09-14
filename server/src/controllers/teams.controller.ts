@@ -268,10 +268,214 @@ export async function createTeamMessage(req: AuthenticatedRequest, res: Response
       }
     });
 
+    // Notify other members
+    const allMembers = [team.leaderId, ...team.members.map(m => m.studentId)];
+    // Unique list in case leader is also in members table (should not be, but safe)
+    const uniqueMembers = Array.from(new Set(allMembers));
+    
+    for (const memberId of uniqueMembers) {
+      if (memberId !== studentId) {
+        await prisma.notification.create({
+          data: {
+            recipientId: memberId,
+            type: "TEAM_MESSAGE",
+            title: "New Team Message",
+            message: `${message.sender.name} sent a new message in ${team.name}.`,
+            referenceId: team.id
+          }
+        });
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: message
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/teams/:teamId/submit
+export async function submitTeam(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const studentId = req.student?.studentId;
+    const { teamId } = req.params;
+
+    if (!studentId) {
+      throw new HttpError(401, "Authentication required");
+    }
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId }
+    });
+
+    if (!team) {
+      throw new HttpError(404, "Team not found");
+    }
+
+    if (team.leaderId !== studentId) {
+      throw new HttpError(403, "Only the team leader can submit the team for review");
+    }
+
+    if (team.approvalStatus === "PENDING_APPROVAL") {
+      throw new HttpError(400, "Team is already pending approval");
+    }
+
+    if (team.approvalStatus === "APPROVED") {
+      throw new HttpError(400, "Team is already approved");
+    }
+
+    const updatedTeam = await prisma.team.update({
+      where: { id: teamId },
+      data: { approvalStatus: "PENDING_APPROVAL" }
+    });
+
+    res.json({
+      success: true,
+      message: "Team submitted for admin review successfully",
+      data: updatedTeam
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /api/teams/:teamId
+export async function deleteTeam(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const studentId = req.student?.studentId;
+    const { teamId } = req.params;
+
+    if (!studentId) throw new HttpError(401, "Authentication required");
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) throw new HttpError(404, "Team not found");
+
+    if (team.leaderId !== studentId) {
+      throw new HttpError(403, "Only the team leader can delete this team");
+    }
+
+    await prisma.$transaction([
+        prisma.teamMember.deleteMany({ where: { teamId } }),
+        prisma.teamInvitation.deleteMany({ where: { teamId } }),
+        prisma.teamMessage.deleteMany({ where: { teamId } }),
+        prisma.teamAIMessage.deleteMany({ where: { teamId } }),
+        prisma.team.delete({ where: { id: teamId } })
+      ]);
+
+    res.json({ success: true, message: "Team deleted successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /api/teams/:teamId/members/:targetStudentId
+export async function removeMember(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const leaderId = req.student?.studentId;
+    const { teamId, targetStudentId } = req.params;
+
+    if (!leaderId) throw new HttpError(401, "Authentication required");
+    if (leaderId === targetStudentId) throw new HttpError(400, "You cannot remove yourself");
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) throw new HttpError(404, "Team not found");
+
+    if (team.leaderId !== leaderId) {
+      throw new HttpError(403, "Only the team leader can remove members");
+    }
+
+    const member = await prisma.teamMember.findUnique({
+      where: { teamId_studentId: { teamId, studentId: targetStudentId } }
+    });
+
+    if (!member) throw new HttpError(404, "Student is not a member of this team");
+
+    await prisma.teamMember.delete({
+      where: { teamId_studentId: { teamId, studentId: targetStudentId } }
+    });
+
+    res.json({ success: true, message: "Member removed successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /api/teams
+export async function getAllApprovedTeams(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const teams = await prisma.team.findMany({
+      where: { approvalStatus: "APPROVED" },
+      include: {
+        leader: { select: { id: true, name: true, email: true } },
+        _count: { select: { members: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json({ success: true, data: teams });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/teams/:teamId/requests
+export async function requestToJoinTeam(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const studentId = req.student?.studentId;
+    const { teamId } = req.params;
+
+    if (!studentId) throw new HttpError(401, "Authentication required");
+
+    const team = await prisma.team.findUnique({ 
+      where: { id: teamId },
+      include: { _count: { select: { members: true } } }
+    });
+
+    if (!team) throw new HttpError(404, "Team not found");
+    if (team.approvalStatus !== "APPROVED") throw new HttpError(400, "Team is not approved yet");
+    if (team.leaderId === studentId) throw new HttpError(400, "You are already the leader of this team");
+    if (team._count.members >= team.maxSize) throw new HttpError(400, "Team is already full");
+
+    const existingMember = await prisma.teamMember.findUnique({
+      where: { teamId_studentId: { teamId, studentId } }
+    });
+    if (existingMember) throw new HttpError(400, "You are already a member of this team");
+
+    const existingRequest = await prisma.teamInvitation.findFirst({
+      where: { teamId, studentId, status: "PENDING" }
+    });
+    if (existingRequest) throw new HttpError(400, "You already have a pending request or invitation for this team");
+
+    const crypto = require("crypto");
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const newRequest = await prisma.teamInvitation.create({
+      data: {
+        teamId,
+        studentId,
+        status: "PENDING",
+        token,
+        expiresAt
+        // Note: we're reusing TeamInvitation. For a request to join, it's effectively a pending record.
+        // Usually, the "inviter" is the leader and the "invitee" is the student. 
+        // Here, the student created it, but it sits as PENDING for this teamId and studentId.
+      }
+    });
+
+    // Notify the leader
+    await prisma.notification.create({
+      data: {
+        recipientId: team.leaderId,
+        type: "TEAM_INVITATION",
+        title: "New Team Join Request",
+        message: "A student has requested to join your team.",
+        referenceId: team.id
+      }
+    });
+
+    res.status(201).json({ success: true, message: "Request sent successfully", data: newRequest });
   } catch (err) {
     next(err);
   }

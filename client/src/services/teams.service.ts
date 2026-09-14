@@ -7,8 +7,11 @@ export interface Team {
  requiredSkills: string | null;
  maxSize: number;
  leaderId: string;
+ approvalStatus: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
  createdAt: string;
  updatedAt: string;
+ roadmap?: any;
+ roadmapGeneratedAt?: string | null;
 }
 
 export interface PopulatedTeam extends Team {
@@ -56,10 +59,46 @@ export const teamsService = {
  return response.data.data;
  },
 
- getMatchingStudents: async (teamId: string, params?: { search?: string; minimumMatchPercentage?: number }) => {
- const response = await api.get<any[]>(`/teams/${teamId}/matching-students`, { params });
+ submitTeam: async (teamId: string) => {
+ const response = await api.post<{ success: boolean; message: string }>(`/teams/${teamId}/submit`);
  return response.data;
  },
+
+  getAllTeams: async () => {
+    const response = await api.get<{ success: boolean; data: PopulatedTeam[] }>("/teams");
+    return response.data.data;
+  },
+
+  deleteTeam: async (teamId: string) => {
+    const response = await api.delete<{ success: boolean; message: string }>(`/teams/${teamId}`);
+    return response.data;
+  },
+
+  removeMember: async (teamId: string, studentId: string) => {
+    const response = await api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/members/${studentId}`);
+    return response.data;
+  },
+
+  requestToJoinTeam: async (teamId: string) => {
+    const response = await api.post<{ success: boolean; message: string }>(`/teams/${teamId}/requests`);
+    return response.data;
+  },
+
+  generateAIPlan: async (teamId: string) => {
+    const response = await api.post<{ success: boolean; data: any }>(`/teams/${teamId}/ai-plan`);
+    return response.data.data;
+  },
+
+  getMatchingStudents: async (teamId: string, params?: { search?: string; minimumMatchPercentage?: number }) => {
+    let url = `/teams/${teamId}/matching-students`;
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.minimumMatchPercentage !== undefined) searchParams.append("minimumMatchPercentage", String(params.minimumMatchPercentage));
+    if (searchParams.toString()) url += `?${searchParams.toString()}`;
+    
+    const response = await api.get<{ success: boolean; data: any[] }>(url);
+    return response.data.data;
+  },
 
  inviteStudent: async (teamId: string, studentId: string) => {
  const response = await api.post<{ success: boolean; data: any }>(`/teams/${teamId}/invitations`, { studentId });
@@ -91,9 +130,24 @@ export const teamsService = {
  return response.data.data;
  },
 
- sendTeamMessage: async (teamId: string, content: string) => {
- const response = await api.post<{ success: boolean; data: any }>(`/teams/${teamId}/messages`, { content });
- return response.data.data;
- }
-};
+  
+  sendTeamMessage: async (teamId: string, content: string) => {
+    const response = await api.post<{ success: boolean; data: any }>(`/teams/${teamId}/messages`, { content });
+    return response.data.data;
+  },
 
+  generateTeamRoadmap: async (teamId: string) => {
+    const response = await api.post<{ success: boolean; data: any }>(`/teams/${teamId}/roadmap`);
+    return response.data.data;
+  },
+
+  getTeamAIMessages: async (teamId: string) => {
+    const response = await api.get<{ success: boolean; data: any[] }>(`/teams/${teamId}/ask-ai`);
+    return response.data.data;
+  },
+
+  askTeamAI: async (teamId: string, question: string) => {
+    const response = await api.post<{ success: boolean; data: any }>(`/teams/${teamId}/ask-ai`, { question });
+    return response.data.data;
+  }
+};

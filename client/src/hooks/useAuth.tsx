@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { Admin } from "@/types";
-import { loginAdmin } from "@/services/auth.service";
+import { loginAdmin, logoutAdmin } from "@/services/auth.service";
 
 interface AuthContextValue {
  admin: Admin | null;

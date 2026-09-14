@@ -13,3 +13,9 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
  const { data } = await api.get<ApiEnvelope<DashboardStats>>("/dashboard");
  return data.data;
 }
+
+export async function logoutAdmin() { await api.post("/auth/logout"); }
+export async function fetchGovernmentStats(): Promise<any> {
+  const { data } = await api.get("/government/dashboard");
+  return data.data;
+}

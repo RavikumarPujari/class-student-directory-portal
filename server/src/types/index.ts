@@ -2,7 +2,7 @@ export interface JwtPayload {
   adminId?: string;
   studentId?: string;
   email: string;
-  role?: "admin" | "student";
+  role?: "admin" | "student" | "government";
 }
 
 export interface StudentInput {
