@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Shield, Loader2, Send, MessageSquare, Info as InfoIcon, Sparkles } from "lucide-react";
+import { ArrowLeft, Users, Shield, Loader2, Send, MessageSquare, Info as InfoIcon, Sparkles, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,30 @@ export function TeamWorkspace() {
     if (activeTab === 'ask-ai') aiMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, aiMessages, activeTab]);
 
+  
+  const handleClearChat = async () => {
+    if (!team || team.leaderId !== student?.id) return;
+    if (!confirm("Are you sure you want to clear all chat messages for this team?")) return;
+    try {
+      await teamsService.clearTeamMessages(team.id);
+      setMessages([]);
+      toast({ title: "Chat cleared", description: "All messages have been deleted." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
+    }
+  };
+
+  const handleUnsendMessage = async (messageId: string) => {
+    if (!team) return;
+    if (!confirm("Unsend this message?")) return;
+    try {
+      await teamsService.unsendTeamMessage(team.id, messageId);
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+    } catch (err: any) {
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || isSending) return;
@@ -103,7 +127,7 @@ export function TeamWorkspace() {
     setNewAiQuestion("");
 
     try {
-      const msg = await teamsService.askTeamAI(teamId!, optimisticQuestion.question);
+      const msg = await teamsService.askTeamAI(teamId!, optimisticQuestion.question); console.log("AI Response:", msg);
       setAiMessages(prev => prev.map(m => m.id === optimisticQuestion.id ? msg : m));
     } catch (err: any) {
       toast({ title: "Failed to get AI answer", description: err.response?.data?.message || err.message, variant: "destructive" });
@@ -121,7 +145,7 @@ export function TeamWorkspace() {
     );
   }
 
-  const InfoComponent = () => (
+  const renderInfo = () => (
     <Card className="border-border bg-card h-full">
       <CardHeader>
         <div className="flex justify-between items-start">
@@ -157,7 +181,7 @@ export function TeamWorkspace() {
     </Card>
   );
 
-  const MembersComponent = () => (
+  const renderMembers = () => (
     <Card className="border-border bg-card h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Team Members</CardTitle>
@@ -204,7 +228,7 @@ export function TeamWorkspace() {
     </Card>
   );
 
-  const DiscussionComponent = () => (
+  const renderDiscussion = () => (
     <Card className="border-border bg-card h-[70vh] min-h-[500px] max-h-[800px] flex flex-col">
       <CardHeader className="border-b border-border pb-4 bg-card">
         <CardTitle className="flex items-center gap-2 text-lg">
@@ -239,9 +263,21 @@ export function TeamWorkspace() {
                         {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </span>
                     </div>
-                    <div className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${isMe ? 'bg-teal text-black rounded-tr-none' : 'bg-muted text-foreground rounded-tl-none border border-border'}`}>
-                      {msg.content}
-                    </div>
+                    <div className="flex flex-col group relative">
+                        <div className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${isMe ? 'bg-teal text-black rounded-tr-none' : 'bg-muted text-foreground rounded-tl-none border border-border'}`}>
+                          {msg.content}
+                        </div>
+                        {isMe && (
+                          <div className="flex items-center justify-end gap-2 mt-1">
+                            <span className="text-[10px] text-teal flex items-center">
+                              <CheckCheck className="h-3 w-3 mr-0.5" /> Delivered
+                            </span>
+                            <button onClick={() => handleUnsendMessage(msg.id)} className="text-[10px] text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                              Unsend
+                            </button>
+                          </div>
+                        )}
+                      </div>
                   </div>
                 </div>
               </div>
@@ -269,7 +305,7 @@ export function TeamWorkspace() {
     </Card>
   );
 
-  const AskAIComponent = () => (
+  const renderAskAI = () => (
     <Card className="border-border bg-card h-[70vh] min-h-[500px] max-h-[800px] flex flex-col border-gold/30">
       <CardHeader className="border-b border-border pb-4 bg-gradient-to-r from-card to-gold/5">
         <CardTitle className="flex items-center gap-2 text-lg text-gold">
@@ -407,8 +443,8 @@ export function TeamWorkspace() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column (Desktop only: Info & Members) */}
         <div className="hidden lg:flex lg:col-span-4 flex-col gap-6">
-          <InfoComponent />
-          <MembersComponent />
+          {renderInfo()}
+          {renderMembers()}
         </div>
 
         {/* Right Column (Desktop: Tabs for Discussion/AI | Mobile: Shows active tab) */}
@@ -433,12 +469,12 @@ export function TeamWorkspace() {
 
           {/* Render Active Component based on Tab */}
           <div className="lg:hidden">
-            {activeTab === 'info' && <InfoComponent />}
-            {activeTab === 'members' && <MembersComponent />}
+            {activeTab === 'info' && renderInfo()}
+            {activeTab === 'members' && renderMembers()}
           </div>
           
           <div className={`h-full ${activeTab === 'info' || activeTab === 'members' ? 'hidden lg:block' : ''}`}>
-            {activeTab === 'ask-ai' ? <AskAIComponent /> : <DiscussionComponent />}
+            {activeTab === 'ask-ai' ? renderAskAI() : renderDiscussion()}
           </div>
         </div>
       </div>

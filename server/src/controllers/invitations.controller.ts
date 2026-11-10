@@ -127,6 +127,7 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response,
         teamName: invitation.team.name,
         leaderName: invitation.leaderName,
         description: invitation.team.description || "",
+        requiredSkills: invitation.team.requiredSkills || "",
         token: invitation.newInvite.token
       });
     } catch (emailErr) {

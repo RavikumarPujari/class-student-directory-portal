@@ -480,3 +480,44 @@ export async function requestToJoinTeam(req: AuthenticatedRequest, res: Response
     next(err);
   }
 }
+
+
+// DELETE /api/teams/:teamId/messages
+export async function clearTeamMessages(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const studentId = req.student?.studentId;
+    const { teamId } = req.params;
+
+    if (!studentId) throw new HttpError(401, "Authentication required");
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) throw new HttpError(404, "Team not found");
+    if (team.leaderId !== studentId) throw new HttpError(403, "Only the team leader can clear chat");
+
+    await prisma.teamMessage.deleteMany({ where: { teamId } });
+
+    res.json({ success: true, message: "Chat cleared successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /api/teams/:teamId/messages/:messageId
+export async function deleteTeamMessage(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const studentId = req.student?.studentId;
+    const { teamId, messageId } = req.params;
+
+    if (!studentId) throw new HttpError(401, "Authentication required");
+
+    const message = await prisma.teamMessage.findUnique({ where: { id: messageId } });
+    if (!message) throw new HttpError(404, "Message not found");
+    if (message.senderId !== studentId) throw new HttpError(403, "You can only unsend your own messages");
+
+    await prisma.teamMessage.delete({ where: { id: messageId } });
+
+    res.json({ success: true, message: "Message unsent" });
+  } catch (err) {
+    next(err);
+  }
+}

@@ -131,6 +131,14 @@ export const teamsService = {
  },
 
   
+  clearTeamMessages: async (teamId: string) => {
+    const response = await api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/messages`);
+    return response.data;
+  },
+  unsendTeamMessage: async (teamId: string, messageId: string) => {
+    const response = await api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/messages/${messageId}`);
+    return response.data;
+  },
   sendTeamMessage: async (teamId: string, content: string) => {
     const response = await api.post<{ success: boolean; data: any }>(`/teams/${teamId}/messages`, { content });
     return response.data.data;

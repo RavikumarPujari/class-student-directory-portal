@@ -1,11 +1,11 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 
 // Helper function to call Gemini with a single retry for 503 errors
-async function callGeminiWithRetry(ai: GoogleGenAI, config: any, retries = 1, delay = 1000): Promise<any> {
+async function callGeminiWithRetry(ai: GoogleGenAI, config: any, retries = 3, delay = 1000): Promise<any> {
   try {
     return await ai.models.generateContent(config);
   } catch (err: any) {
-    if (retries > 0 && err.status === 503) {
+    if (retries > 0 && err.status === 503 || err.status === "UNAVAILABLE" || err.message?.includes("503") || err.message?.includes("demand") || err.message?.includes("UNAVAILABLE")) {
       console.log(`Gemini API 503 error. Retrying in ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return callGeminiWithRetry(ai, config, retries - 1, delay * 2);

@@ -5,7 +5,9 @@ import {
   getMyTeams, 
   getTeam, 
   getTeamMessages, 
-  createTeamMessage, 
+  createTeamMessage,
+  clearTeamMessages,
+  deleteTeamMessage, 
   submitTeam,
   deleteTeam,
   removeMember,
@@ -86,6 +88,12 @@ router.post(
   sanitizeBody(["content"]),
   createTeamMessage
 );
+
+// DELETE /api/teams/:teamId/messages
+router.delete("/:teamId/messages", requireStudentAuth, clearTeamMessages);
+
+// DELETE /api/teams/:teamId/messages/:messageId
+router.delete("/:teamId/messages/:messageId", requireStudentAuth, deleteTeamMessage);
 
 // GET /api/teams/:teamId/matching-students
 router.get("/:teamId/matching-students", requireStudentAuth, getMatchingStudents);
