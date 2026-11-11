@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate, useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -10,7 +10,9 @@ import {
   LogOut,
   GraduationCap,
   X,
-  LogIn
+  LogIn,
+  Home as HomeIcon,
+  Globe
 } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { teamsService } from "@/services/teams.service";
@@ -41,7 +43,7 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
 
   const navItems = [
     {
-      to: "/",
+      to: "/dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
       matchExact: true,
@@ -76,7 +78,7 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
 
   const handleLogout = () => {
     studentLogout();
-    navigate("/student/login");
+    navigate("/");
     if (onCloseMobile) onCloseMobile();
   };
 
@@ -86,7 +88,7 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
       <div>
         <div className="flex items-center justify-between px-6 pt-6 pb-5">
           <NavLink
-            to="/"
+            to="/dashboard"
             onClick={onCloseMobile}
             className="flex items-center gap-3 group transition-transform"
           >
@@ -102,10 +104,13 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
               </div>
             </div>
           </NavLink>
+
+          {/* Close button on mobile */}
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
+              aria-label="Close sidebar"
             >
               <X className="h-5 w-5" />
             </button>
@@ -113,13 +118,12 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
         </div>
 
         {/* Navigation Items */}
-        <nav className="space-y-1.5 px-4 pt-4">
+        <nav className="mt-2 space-y-1 px-3">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              item.matchExact
-                ? location.pathname === "/" || location.pathname === "/dashboard"
-                : location.pathname.startsWith(item.to);
+            const isActive = item.matchExact
+              ? location.pathname === item.to
+              : location.pathname.startsWith(item.to);
 
             return (
               <NavLink
@@ -128,8 +132,8 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
                 onClick={onCloseMobile}
                 className={`group flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
                   isActive
-                    ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30"
-                    : "text-slate-300 hover:bg-white/[0.08] hover:text-white"
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                    : "text-slate-400 hover:bg-white/[0.08] hover:text-white"
                 }`}
               >
                 <div className="flex items-center gap-3.5">
@@ -150,13 +154,27 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
             );
           })}
 
+          <div className="pt-2 pb-1">
+            <div className="h-px bg-white/10 mx-2" />
+          </div>
+
+          {/* Link to public home */}
+          <Link
+            to="/"
+            onClick={onCloseMobile}
+            className="group flex w-full items-center gap-3.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-400 hover:bg-white/[0.08] hover:text-white transition-colors"
+          >
+            <Globe className="h-4 w-4 text-slate-400 group-hover:text-white transition-colors" />
+            <span>Public Home Page</span>
+          </Link>
+
           {/* Logout / Login button */}
           {isStudentAuthenticated ? (
             <button
               onClick={handleLogout}
-              className="group flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-semibold text-slate-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
+              className="group flex w-full items-center gap-3.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
             >
-              <LogOut className="h-5 w-5 text-slate-400 group-hover:text-rose-400 transition-colors" />
+              <LogOut className="h-4 w-4 text-slate-400 group-hover:text-rose-400 transition-colors" />
               <span>Logout</span>
             </button>
           ) : (
@@ -174,7 +192,6 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
 
       {/* Bottom Watermark & Illustration Section */}
       <div className="relative overflow-hidden px-6 pb-8 pt-6">
-        {/* Subtle curved background overlay */}
         <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-purple-500/15 blur-xl" />
 
@@ -215,4 +232,4 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
     </>
   );
 }
-
+export default PortalSidebar;

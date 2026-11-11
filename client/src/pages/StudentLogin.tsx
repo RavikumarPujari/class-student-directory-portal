@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Lock, Mail, Loader2, GraduationCap, ArrowRight } from "lucide-react";
+import { Lock, Mail, Loader2, GraduationCap, ArrowRight, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,11 @@ export function StudentLogin() {
   const { studentLogin } = useStudentAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+
+  const redirectParam = searchParams.get("redirect");
+  const redirectTarget = redirectParam || (location.state as any)?.from?.pathname || "/dashboard";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,7 +29,7 @@ export function StudentLogin() {
     try {
       await studentLogin(email, password);
       toast({ title: "Welcome back!", description: "Login successful.", variant: "success" });
-      navigate("/");
+      navigate(redirectTarget, { replace: true });
     } catch (err) {
       toast({ title: "Login failed", description: getErrorMessage(err), variant: "destructive" });
     } finally {
@@ -40,6 +45,15 @@ export function StudentLogin() {
         transition={{ duration: 0.3 }}
         className="w-full max-w-md"
       >
+        <div className="mb-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Home
+          </Link>
+        </div>
+
         <Card className="rounded-2xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5">
           <CardHeader className="text-center pb-2 pt-8">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20 shadow-xs">
@@ -49,7 +63,9 @@ export function StudentLogin() {
               Student Sign In
             </CardTitle>
             <CardDescription className="text-slate-500 text-sm mt-1">
-              Enter your credentials to access your student dashboard
+              {redirectParam === "/directory"
+                ? "Please sign in to access the Student Directory"
+                : "Enter your credentials to access your student dashboard"}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4 pb-8 px-6 sm:px-8">
@@ -63,7 +79,7 @@ export function StudentLogin() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="student@example.com"
+                    placeholder="student@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -107,7 +123,7 @@ export function StudentLogin() {
                     </span>
                   ) : (
                     <span className="flex items-center justify-center gap-1.5">
-                      Sign In to Dashboard <ArrowRight className="h-4 w-4" />
+                      Sign In {redirectParam === "/directory" ? "to Directory" : "to Dashboard"} <ArrowRight className="h-4 w-4" />
                     </span>
                   )}
                 </Button>
@@ -117,7 +133,10 @@ export function StudentLogin() {
             <div className="mt-6 pt-5 border-t border-slate-100 text-center">
               <p className="text-xs text-slate-500">
                 New to ClassDirectory?{" "}
-                <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
+                <Link
+                  to={redirectParam ? `/register?redirect=${encodeURIComponent(redirectParam)}` : "/register"}
+                  className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                >
                   Register with Gmail OTP
                 </Link>
               </p>

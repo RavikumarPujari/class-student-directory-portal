@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, UserPlus, Mail, ShieldCheck, Lock, ArrowLeft, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/useToast";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 import {
   sendRegistrationOtp,
   verifyRegistrationOtp,
@@ -43,7 +44,13 @@ export function Register() {
   const [success, setSuccess] = useState(false);
 
   const { toast } = useToast();
+  const { studentLogin } = useStudentAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+
+  const redirectParam = searchParams.get("redirect");
+  const redirectTarget = redirectParam || (location.state as any)?.from?.pathname || "/directory";
 
   // 5-minute validity timer & 60-second resend cooldown timer
   useEffect(() => {
@@ -265,12 +272,20 @@ export function Register() {
         verifyToken,
       });
 
-      setSuccess(true);
-      toast({
-        title: "Registration successful!",
-        description: "Your account is created and your Gmail is verified. You can now log in.",
-        variant: "success",
-      });
+      // Automatically sign in the student and redirect to the target destination (e.g. /directory)
+      try {
+        await studentLogin(email.trim().toLowerCase(), password);
+        toast({
+          title: "Registration successful!",
+          description: "Welcome to ClassDirectory! Redirecting to Student Directory...",
+          variant: "success",
+        });
+        navigate(redirectTarget, { replace: true });
+        return;
+      } catch {
+        // Fallback if auto-login encounters an edge case
+        setSuccess(true);
+      }
     } catch (err) {
       setPasswordError(getErrorMessage(err));
       toast({
@@ -283,7 +298,7 @@ export function Register() {
     }
   }
 
-  // --- Success Screen ---
+  // --- Success Screen (Fallback) ---
   if (success) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center py-16 px-4 bg-[#f3f6fb]">
@@ -295,14 +310,21 @@ export function Register() {
               </div>
               <h2 className="mt-6 font-display text-2xl font-bold tracking-tight text-slate-900">You're all set!</h2>
               <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Your student account has been created with a verified Gmail address. You can now sign in to browse teams, explore the directory, and set up your student profile.
+                Your student account has been created with a verified Gmail address. Sign in to browse teams, explore the directory, and set up your student profile.
               </p>
               <div className="mt-8 flex flex-col gap-2.5 sm:flex-row">
-                <Button className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-11" onClick={() => navigate("/student/login")}>
-                  Log In to Dashboard
+                <Button
+                  className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-11"
+                  onClick={() => navigate(`/student/login?redirect=${encodeURIComponent(redirectTarget)}`)}
+                >
+                  Log In Now
                 </Button>
-                <Button variant="outline" className="flex-1 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs h-11" onClick={() => navigate("/directory")}>
-                  View Directory
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs h-11"
+                  onClick={() => navigate("/")}
+                >
+                  Go to Home
                 </Button>
               </div>
             </CardContent>
@@ -315,8 +337,16 @@ export function Register() {
   return (
     <div className="flex min-h-[85vh] items-center justify-center py-12 px-4 bg-[#f3f6fb]">
       <div className="w-full max-w-lg">
+        <div className="mb-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Home
+          </Link>
+        </div>
+
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          
           {/* Header */}
           <div className="mb-6 text-center">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20 shadow-xs">
@@ -337,7 +367,6 @@ export function Register() {
 
           <Card className="rounded-2xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 overflow-hidden">
             <AnimatePresence mode="wait">
-              
               {/* STEP 1: Student Details */}
               {step === 1 && (
                 <motion.div
@@ -424,13 +453,12 @@ export function Register() {
                       <div className="text-center pt-2 border-t border-slate-100">
                         <p className="text-xs text-slate-500">
                           Already have an account?{" "}
-                          <button
-                            type="button"
-                            onClick={() => navigate("/student/login")}
+                          <Link
+                            to={redirectParam ? `/student/login?redirect=${encodeURIComponent(redirectParam)}` : "/student/login"}
                             className="font-semibold text-indigo-600 hover:underline"
                           >
                             Sign in here
-                          </button>
+                          </Link>
                         </p>
                       </div>
                     </form>
@@ -458,7 +486,6 @@ export function Register() {
                   </CardHeader>
                   <CardContent className="px-6 sm:px-8 pb-8 pt-2">
                     <form onSubmit={handleVerifyOtp} className="space-y-5">
-                      
                       {/* 6 OTP Inputs */}
                       <div className="flex justify-center gap-2 sm:gap-2.5 py-2">
                         {otp.map((digit, index) => (
@@ -607,7 +634,6 @@ export function Register() {
                   </CardContent>
                 </motion.div>
               )}
-
             </AnimatePresence>
           </Card>
         </motion.div>

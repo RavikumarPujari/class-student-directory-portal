@@ -7,11 +7,12 @@ import { PortalLayout } from "@/components/layout/PortalLayout";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
+import { StudentProtectedRoute } from "@/components/shared/StudentProtectedRoute";
 import { Loader2 } from "lucide-react";
 
+const Home = lazy(() => import("@/pages/Home").then(m => ({ default: m.Home })));
 const Dashboard = lazy(() => import("@/pages/Dashboard").then(m => ({ default: m.Dashboard })));
 const Settings = lazy(() => import("@/pages/Settings").then(m => ({ default: m.Settings })));
-const Home = lazy(() => import("@/pages/Home").then(m => ({ default: m.Home })));
 const Register = lazy(() => import("@/pages/Register").then(m => ({ default: m.Register })));
 const Directory = lazy(() => import("@/pages/Directory").then(m => ({ default: m.Directory })));
 const AdminLogin = lazy(() => import("@/pages/AdminLogin").then(m => ({ default: m.AdminLogin })));
@@ -45,9 +46,23 @@ export default function App() {
         <BrowserRouter>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
-              {/* Primary Student Portal with Reference Dashboard & Shell */}
-              <Route element={<PortalLayout />}>
-                <Route path="/" element={<Dashboard />} />
+              {/* Public Website & Authentication Routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/student/login" element={<StudentLogin />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+              </Route>
+
+              {/* Protected Student Portal Experience */}
+              <Route
+                element={
+                  <StudentProtectedRoute>
+                    <PortalLayout />
+                  </StudentProtectedRoute>
+                }
+              >
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/directory" element={<Directory />} />
                 <Route path="/student/profile" element={<StudentProfile />} />
@@ -59,15 +74,7 @@ export default function App() {
                 <Route path="/student/settings" element={<Settings />} />
               </Route>
 
-              {/* Public & Authentication Routes */}
-              <Route element={<PublicLayout />}>
-                <Route path="/home" element={<Home />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/student/login" element={<StudentLogin />} />
-              </Route>
-
-              {/* Admin (protected) */}
+              {/* Admin Portal (Protected for Admin) */}
               <Route
                 element={
                   <ProtectedRoute>
