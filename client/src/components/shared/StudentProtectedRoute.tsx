@@ -24,3 +24,4 @@ export function StudentProtectedRoute({ children }: StudentProtectedRouteProps) 
   return <>{children}</>;
 }
 export default StudentProtectedRoute;
+
