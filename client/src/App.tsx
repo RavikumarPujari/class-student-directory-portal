@@ -3,11 +3,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { StudentAuthProvider } from "@/hooks/useStudentAuth";
 import { Toaster } from "@/components/ui/toaster";
+import { PortalLayout } from "@/components/layout/PortalLayout";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { Loader2 } from "lucide-react";
 
+const Dashboard = lazy(() => import("@/pages/Dashboard").then(m => ({ default: m.Dashboard })));
+const Settings = lazy(() => import("@/pages/Settings").then(m => ({ default: m.Settings })));
 const Home = lazy(() => import("@/pages/Home").then(m => ({ default: m.Home })));
 const Register = lazy(() => import("@/pages/Register").then(m => ({ default: m.Register })));
 const Directory = lazy(() => import("@/pages/Directory").then(m => ({ default: m.Directory })));
@@ -25,54 +28,64 @@ const TeamsDirectory = lazy(() => import("@/pages/TeamsDirectory").then(m => ({ 
 const NotFound = lazy(() => import("@/pages/NotFound").then(m => ({ default: m.NotFound })));
 
 function LoadingFallback() {
- return (
- <div className="flex min-h-screen items-center justify-center">
- <Loader2 className="h-8 w-8 animate-spin text-primary" />
- </div>
- );
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb]">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-9 w-9 animate-spin text-indigo-600" />
+        <span className="text-xs font-medium text-slate-500">Loading ClassDirectory...</span>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
- return (
- <AuthProvider>
- <StudentAuthProvider>
- <BrowserRouter>
- <Suspense fallback={<LoadingFallback />}>
- <Routes>
- {/* Public site */}
- <Route element={<PublicLayout />}>
- <Route path="/" element={<Home />} />
- <Route path="/register" element={<Register />} />
- <Route path="/directory" element={<Directory />} />
- <Route path="/admin/login" element={<AdminLogin />} />
- <Route path="/student/login" element={<StudentLogin />} />
- <Route path="/student/profile" element={<StudentProfile />} />
- <Route path="/student/teams/directory" element={<TeamsDirectory />} />
-          <Route path="/student/teams/create" element={<CreateTeam />} />
- <Route path="/student/teams/me" element={<MyTeam />} />
- <Route path="/student/teams/:teamId" element={<TeamWorkspace />} />
- <Route path="/student/invitations" element={<MyInvitations />} />
- </Route>
+  return (
+    <AuthProvider>
+      <StudentAuthProvider>
+        <BrowserRouter>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              {/* Primary Student Portal with Reference Dashboard & Shell */}
+              <Route element={<PortalLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/directory" element={<Directory />} />
+                <Route path="/student/profile" element={<StudentProfile />} />
+                <Route path="/student/teams/directory" element={<TeamsDirectory />} />
+                <Route path="/student/teams/create" element={<CreateTeam />} />
+                <Route path="/student/teams/me" element={<MyTeam />} />
+                <Route path="/student/teams/:teamId" element={<TeamWorkspace />} />
+                <Route path="/student/invitations" element={<MyInvitations />} />
+                <Route path="/student/settings" element={<Settings />} />
+              </Route>
 
- {/* Admin (protected) */}
- <Route
- element={
- <ProtectedRoute>
- <AdminLayout />
- </ProtectedRoute>
- }
- >
- <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/government/dashboard" element={<GovernmentDashboard />} />
- <Route path="/admin/students" element={<AdminStudents />} />
- </Route>
+              {/* Public & Authentication Routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/home" element={<Home />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/student/login" element={<StudentLogin />} />
+              </Route>
 
- <Route path="*" element={<NotFound />} />
- </Routes>
- </Suspense>
- </BrowserRouter>
- <Toaster />
- </StudentAuthProvider>
- </AuthProvider>
- );
+              {/* Admin (protected) */}
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/government/dashboard" element={<GovernmentDashboard />} />
+                <Route path="/admin/students" element={<AdminStudents />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+        <Toaster />
+      </StudentAuthProvider>
+    </AuthProvider>
+  );
 }
