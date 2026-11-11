@@ -215,3 +215,4 @@ export function PortalSidebar({ mobileOpen = false, onCloseMobile }: PortalSideb
     </>
   );
 }
+

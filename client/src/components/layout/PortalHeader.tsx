@@ -289,3 +289,4 @@ export function PortalHeader({ onOpenMobileSidebar }: PortalHeaderProps) {
     </header>
   );
 }
+

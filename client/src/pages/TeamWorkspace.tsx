@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, Shield, Loader2, Send, MessageSquare, Info as InfoIcon, Sparkles, CheckCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

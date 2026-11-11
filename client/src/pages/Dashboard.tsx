@@ -687,3 +687,4 @@ export function Dashboard() {
     </div>
   );
 }
+
