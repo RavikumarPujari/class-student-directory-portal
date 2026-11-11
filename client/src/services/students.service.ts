@@ -111,3 +111,30 @@ export async function downloadExport(format: "csv" | "excel"): Promise<void> {
 }
 
 export async function logoutStudent() { await api.post("/students/auth/logout"); }
+
+// --- Gmail OTP Verification Endpoints ---
+
+export async function sendRegistrationOtp(payload: { name: string; usn: string; email: string }): Promise<{ success: boolean; message: string }> {
+  const { data } = await api.post<{ success: boolean; message: string }>("/students/verification/send-otp", payload);
+  return data;
+}
+
+export async function verifyRegistrationOtp(payload: { email: string; otp: string }): Promise<{ success: boolean; message: string; verifyToken: string }> {
+  const { data } = await api.post<{ success: boolean; message: string; verifyToken: string }>("/students/verification/verify-otp", payload);
+  return data;
+}
+
+export async function resendRegistrationOtp(payload: { email: string }): Promise<{ success: boolean; message: string }> {
+  const { data } = await api.post<{ success: boolean; message: string }>("/students/verification/resend-otp", payload);
+  return data;
+}
+
+export async function sendProfileVerificationOtp(): Promise<{ success: boolean; message: string }> {
+  const { data } = await api.post<{ success: boolean; message: string }>("/students/verification/profile-send-otp");
+  return data;
+}
+
+export async function verifyProfileOtp(otp: string): Promise<{ success: boolean; message: string }> {
+  const { data } = await api.post<{ success: boolean; message: string }>("/students/verification/profile-verify-otp", { otp });
+  return data;
+}

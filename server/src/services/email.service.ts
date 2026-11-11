@@ -484,4 +484,183 @@ export async function sendTeamInvitationEmail({
   }
 }
 
+export function buildOtpEmailPlainText({
+  studentName,
+  otp
+}: {
+  studentName: string;
+  otp: string;
+}): string {
+  const safeName = studentName || "Student";
+  return [
+    `Hello ${safeName},`,
+    "",
+    "Thank you for registering with Class Student Directory Portal!",
+    "",
+    "Please use the following verification code to complete your registration:",
+    "",
+    `    ${otp}`,
+    "",
+    "This code will expire in 5 minutes.",
+    "",
+    "If you did not request this code, you can safely ignore this email.",
+    "",
+    "Best regards,",
+    "ClassDirectory Team"
+  ].join("\n");
+}
+
+export function buildOtpEmailHtml({
+  studentName,
+  otp
+}: {
+  studentName: string;
+  otp: string;
+}): string {
+  const safeStudentName = escapeHtml(studentName || "Student");
+  const safeOtp = escapeHtml(otp);
+  const currentYear = new Date().getFullYear();
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Verify Your Email - ClassDirectory</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b132b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <div style="background-color: #0b132b; width: 100%; padding: 40px 0;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+      <tr>
+        <td align="center" style="padding: 0 16px;">
+          
+          <!-- Outer Container -->
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #1c2541; border: 1px solid #334155; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); border-collapse: separate;">
+            
+            <!-- Header -->
+            <tr>
+              <td style="padding: 32px 36px; background-color: #0b132b; border-bottom: 1px solid #334155; text-align: center;">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
+                  <tr>
+                    <td style="background-color: #f4c430; width: 40px; height: 40px; border-radius: 10px; text-align: center; vertical-align: middle;">
+                      <span style="color: #0b132b; font-size: 20px; font-weight: bold; line-height: 40px; display: inline-block;">🎓</span>
+                    </td>
+                    <td style="padding-left: 12px; text-align: left;">
+                      <span style="font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; display: block;">ClassDirectory</span>
+                      <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block;">Email Verification</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding: 36px 36px 28px 36px;">
+                <h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">Hello ${safeStudentName},</h1>
+                <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+                  Thank you for registering with <strong>Class Student Directory Portal</strong>!
+                </p>
+                <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+                  Please use the following verification code to complete your registration:
+                </p>
+
+                <!-- OTP Display Box -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0; border-collapse: collapse;">
+                  <tr>
+                    <td align="center">
+                      <div style="background-color: #0b132b; border: 2px solid #f4c430; border-radius: 12px; padding: 20px 32px; display: inline-block; text-align: center;">
+                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 800; color: #f4c430; letter-spacing: 10px; display: inline-block;">${safeOtp}</span>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Expiry Note -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0b132b; border: 1px solid #334155; border-radius: 8px; margin-bottom: 24px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 12px 16px; text-align: center;">
+                      <p style="margin: 0; font-size: 13px; color: #f87171; font-weight: 600;">
+                        ⏱️ This code will expire in 5 minutes.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin: 0 0 28px 0; font-size: 13px; line-height: 1.6; color: #94a3b8;">
+                  If you did not request this code, you can safely ignore this email.
+                </p>
+
+                <p style="margin: 0; font-size: 14px; color: #cbd5e1; font-weight: 500;">
+                  Best regards,<br>
+                  <strong style="color: #ffffff;">ClassDirectory Team</strong>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding: 24px 36px; background-color: #0b132b; border-top: 1px solid #334155; text-align: center;">
+                <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">
+                  Class Student Directory &bull; Secure Academic Platform
+                </p>
+                <p style="margin: 0; font-size: 11px; color: #475569;">
+                  &copy; ${currentYear} ClassDirectory Portal. All rights reserved.
+                </p>
+              </td>
+            </tr>
+
+          </table>
+          <!-- /Outer Container -->
+
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>`;
+}
+
+export async function sendOtpEmail({
+  toEmail,
+  studentName,
+  otp
+}: {
+  toEmail: string;
+  studentName: string;
+  otp: string;
+}): Promise<boolean> {
+  const transporter = getTransporter();
+  const from = process.env.SMTP_FROM || "Class Student Directory <noreply@studentportal.com>";
+
+  if (!transporter) {
+    console.log("=========================================");
+    console.log("EMAIL SERVICE DISABLED: Missing credentials.");
+    console.log(`Would have sent OTP to: ${toEmail}`);
+    console.log(`Student: ${studentName}`);
+    console.log("=========================================");
+    return true;
+  }
+
+  const html = buildOtpEmailHtml({ studentName, otp });
+  const text = buildOtpEmailPlainText({ studentName, otp });
+
+  try {
+    const info = await transporter.sendMail({
+      from,
+      to: toEmail,
+      subject: "Verify Your Email - ClassDirectory",
+      text,
+      html
+    });
+    console.log(`[EmailService] OTP email dispatched successfully to ${toEmail}. Message ID: ${info.messageId}`);
+    return true;
+  } catch (err) {
+    console.error("Failed to send OTP email:", err);
+    throw new Error("Failed to dispatch verification email");
+  }
+}
+
+
 

@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LogOut, User, Rocket, Users, Bell, Mail, BookOpen, ChevronRight, Edit3, ArrowLeft, Trash2, Loader2 } from "lucide-react";
+import { LogOut, User, Rocket, Users, Bell, Mail, BookOpen, ChevronRight, Edit3, ArrowLeft, Trash2, Loader2, CheckCircle2, ShieldCheck, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StudentForm } from "@/components/shared/StudentForm";
 import { Button } from "@/components/ui/button";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useToast } from "@/hooks/useToast";
-import { updateMyStudentProfile, deleteMyStudentProfile } from "@/services/students.service";
+import { updateMyStudentProfile, deleteMyStudentProfile, sendProfileVerificationOtp, verifyProfileOtp } from "@/services/students.service";
 import { teamsService } from "@/services/teams.service";
 import { getErrorMessage } from "@/services/api";
 import { StudentFormSchema } from "@/utils/validation";
@@ -23,6 +23,14 @@ export function StudentProfile() {
  const [teams, setTeams] = useState<any[]>([]);
  const [invitations, setInvitations] = useState<any[]>([]);
  const [isLoadingTeams, setIsLoadingTeams] = useState(true);
+  
+  // Email verification states for legacy unverified accounts
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [verifyOtpInput, setVerifyOtpInput] = useState(["", "", "", "", "", ""]);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [verifyTimer, setVerifyTimer] = useState(300);
+  const [verifyCooldown, setVerifyCooldown] = useState(60);
 
  const { toast } = useToast();
  const navigate = useNavigate();
@@ -50,7 +58,104 @@ export function StudentProfile() {
  }
  };
 
- if (!student) return null;
+ 
+  useEffect(() => {
+    if (!isVerifyModalOpen) return;
+    const interval = setInterval(() => {
+      setVerifyTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      setVerifyCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isVerifyModalOpen]);
+
+  const handleOpenVerifyModal = async () => {
+    setIsVerifyModalOpen(true);
+    setVerifyOtpInput(["", "", "", "", "", ""]);
+    setVerifyTimer(300);
+    setVerifyCooldown(60);
+    setIsSendingOtp(true);
+    try {
+      await sendProfileVerificationOtp();
+      toast({
+        title: "Verification Code Sent",
+        description: `A 6-digit verification code has been sent to ${student?.email || ""}.`,
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to send code",
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleResendProfileOtp = async () => {
+    if (verifyCooldown > 0) return;
+    setIsSendingOtp(true);
+    try {
+      await sendProfileVerificationOtp();
+      setVerifyOtpInput(["", "", "", "", "", ""]);
+      setVerifyTimer(300);
+      setVerifyCooldown(60);
+      toast({
+        title: "New Code Sent",
+        description: `A new verification code was sent to ${student?.email || ""}.`,
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Resend failed",
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleConfirmProfileOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const fullOtp = verifyOtpInput.join("");
+    if (fullOtp.length !== 6) {
+      toast({
+        title: "Incomplete code",
+        description: "Please enter all 6 digits of the verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      await verifyProfileOtp(fullOtp);
+      await refreshStudentProfile();
+      setIsVerifyModalOpen(false);
+      toast({
+        title: "Email Verified!",
+        description: "Your Gmail address has been successfully verified.",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Verification failed",
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const formatVerifyTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  if (!student) return null;
 
  async function handleUpdate(values: StudentFormSchema) {
  setIsUpdating(true);
@@ -437,6 +542,79 @@ export function StudentProfile() {
  </div>
  </motion.div>
  )}
- </div>
- );
+ 
+      {/* EMAIL VERIFICATION MODAL FOR LEGACY ACCOUNTS */}
+      <Dialog open={isVerifyModalOpen} onOpenChange={setIsVerifyModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <ShieldCheck className="h-5 w-5 text-teal" /> Verify Your Gmail
+            </DialogTitle>
+            <DialogDescription>
+              We sent a 6-digit verification code to <strong className="text-foreground">{student?.email}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleConfirmProfileOtp} className="space-y-5 pt-2">
+            <div className="flex justify-center gap-2 py-2">
+              {verifyOtpInput.map((digit, idx) => (
+                <input
+                  key={idx}
+                  id={`verify-otp-${idx}`}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/[^0-9]/g, "");
+                    const updated = [...verifyOtpInput];
+                    updated[idx] = clean ? clean.slice(-1) : "";
+                    setVerifyOtpInput(updated);
+                    if (clean && idx < 5) {
+                      document.getElementById(`verify-otp-${idx + 1}`)?.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace" && !verifyOtpInput[idx] && idx > 0) {
+                      document.getElementById(`verify-otp-${idx - 1}`)?.focus();
+                    }
+                  }}
+                  className="h-12 w-11 text-center text-xl font-bold font-mono rounded-xl border border-border bg-muted text-foreground focus:outline-none focus:ring-2 focus:ring-teal"
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
+              <span>Code expires in: <strong className="font-mono text-foreground">{formatVerifyTime(verifyTimer)}</strong></span>
+              <button
+                type="button"
+                onClick={handleResendProfileOtp}
+                disabled={verifyCooldown > 0 || isSendingOtp}
+                className={`flex items-center gap-1 font-medium ${
+                  verifyCooldown > 0 ? "text-muted-foreground opacity-60 cursor-not-allowed" : "text-teal hover:underline cursor-pointer"
+                }`}
+              >
+                <RotateCcw className="h-3 w-3" />
+                {verifyCooldown > 0 ? `Resend (${verifyCooldown}s)` : "Resend code"}
+              </button>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsVerifyModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-teal hover:bg-teal/90 text-black font-semibold"
+                disabled={isVerifyingOtp || verifyOtpInput.join("").length !== 6 || verifyTimer <= 0}
+              >
+                {isVerifyingOtp ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                Verify & Update
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

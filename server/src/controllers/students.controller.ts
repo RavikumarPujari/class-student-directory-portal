@@ -6,11 +6,13 @@ import { prisma } from "../config/prisma";
 import { HttpError } from "../middleware/errorHandler";
 import { studentsToCsv, studentsToExcelBuffer } from "../utils/export";
 import { logAccess } from "../utils/audit";
+import { hashVerifyToken } from "./studentVerification.controller";
 
+// POST /students — public self-registration endpoint
 // POST /students — public self-registration endpoint
 export async function createStudent(req: Request, res: Response, next: NextFunction) {
   try {
-const {
+    const {
       name,
       usn,
       section,
@@ -27,63 +29,93 @@ const {
       bio,
       photo,
       password,
+      verifyToken,
     } = req.body;
 
-const usnUpper = (usn || "").toUpperCase();
+    const usnUpper = (usn || "").toUpperCase();
     const emailLower = (email || "").toLowerCase();
     const phoneTrimmed = (phone || "").trim();
 
-    // Distinct uniqueness checks so each field gets a clear, specific message.
-    const existingUsn = await prisma.student.findUnique({ where: { usn: usnUpper } });
-    if (existingUsn) {
-      throw new HttpError(409, "This USN already exists.");
-    }
-
-    const existingEmail = await prisma.student.findUnique({ where: { email: emailLower } });
-    if (existingEmail) {
-      throw new HttpError(409, "This email is already registered.");
-    }
-
-    let existingPhone = null;
-    if (phoneTrimmed) {
-      existingPhone = await prisma.student.findFirst({ where: { phone: phoneTrimmed } });
-      if (existingPhone) {
-        throw new HttpError(409, "This mobile number is already registered.");
+    // Verify verification token for public registration
+    const isAdmin = !!(req as any).admin;
+    if (!isAdmin) {
+      if (!verifyToken || typeof verifyToken !== "string") {
+        throw new HttpError(403, "Email verification is required before creating an account. Please verify your Gmail address.");
       }
     }
 
-    // Hash the password only if provided (keeps backward compatibility for existing flows).
-    // New registrations requiring student login must supply a password.
+    // Hash password if provided
     let passwordHash: string | null = null;
     if (password) {
       passwordHash = await bcrypt.hash(password, 12);
     }
 
-    const student = await prisma.student.create({
-      data: {
-        name,
-        usn: usnUpper,
-        section: section ? section.toUpperCase() : null,
-        branch: branch || null,
-        year: year || null,
-        semester: semester ? parseInt(semester, 10) : null,
-        phone: phoneTrimmed || null,
-        email: email.toLowerCase(),
-        linkedin: linkedin || null,
-        github: github || null,
-        portfolio: portfolio || null,
-        favoriteDomain: favoriteDomain || null,
-        skills: skills || null,
-        bio: bio || null,
-        photo: photo || null,
-        passwordHash,
-      },
+    // Atomic transaction: verify token, check duplicates, create student, and consume token
+    const student = await prisma.$transaction(async (tx) => {
+      // 1. If not admin, validate and consume verification token
+      if (!isAdmin) {
+        const verifyTokenHashed = hashVerifyToken(verifyToken);
+        const verification = await tx.emailVerification.findFirst({
+          where: {
+            email: emailLower,
+            verifyTokenHashed,
+            isVerified: true,
+            tokenExpiresAt: { gt: new Date() },
+          },
+        });
+
+        if (!verification) {
+          throw new HttpError(403, "Email verification has expired or is invalid. Please verify your Gmail address again.");
+        }
+
+        // Delete/consume verification record immediately within transaction
+        await tx.emailVerification.delete({ where: { id: verification.id } });
+      }
+
+      // 2. Recheck duplicate USN and email inside transaction to eliminate race conditions
+      const existingUsn = await tx.student.findUnique({ where: { usn: usnUpper } });
+      if (existingUsn) {
+        throw new HttpError(409, "This USN is already registered.");
+      }
+
+      const existingEmail = await tx.student.findUnique({ where: { email: emailLower } });
+      if (existingEmail) {
+        throw new HttpError(409, "This email is already registered.");
+      }
+
+      if (phoneTrimmed) {
+        const existingPhone = await tx.student.findFirst({ where: { phone: phoneTrimmed } });
+        if (existingPhone) {
+          throw new HttpError(409, "This mobile number is already registered.");
+        }
+      }
+
+      // 3. Create student with isEmailVerified = true
+      return await tx.student.create({
+        data: {
+          name,
+          usn: usnUpper,
+          section: section ? section.toUpperCase() : null,
+          branch: branch || null,
+          year: year || null,
+          semester: semester ? parseInt(semester, 10) : null,
+          phone: phoneTrimmed || null,
+          email: emailLower,
+          linkedin: linkedin || null,
+          github: github || null,
+          portfolio: portfolio || null,
+          favoriteDomain: favoriteDomain || null,
+          skills: skills || null,
+          bio: bio || null,
+          photo: photo || null,
+          passwordHash,
+          isEmailVerified: true,
+        },
+      });
     });
 
-    // Never return the password hash to the client.
     const { passwordHash: _ph, ...safeStudent } = student;
-
-    res.status(201).json({ success: true, message: "Registration successful", data: safeStudent });
+    return res.status(201).json({ success: true, message: "Registration successful", data: safeStudent });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return next(new HttpError(409, "A student with this USN or email already exists"));
@@ -256,8 +288,18 @@ export async function deleteStudent(req: Request, res: Response, next: NextFunct
 // DELETE /students/clear-all — protected (admin only)
 export async function clearAllStudents(req: Request, res: Response, next: NextFunction) {
   try {
-    // deleteMany removes all rows atomically and returns the count deleted.
-    const { count } = await prisma.student.deleteMany({});
+    // Safely remove all student-related dependent records and students in an atomic transaction
+    const count = await prisma.$transaction(async (tx) => {
+      await tx.teamMessage.deleteMany({});
+      await tx.teamAIMessage.deleteMany({});
+      await tx.notification.deleteMany({});
+      await tx.teamInvitation.deleteMany({});
+      await tx.teamMember.deleteMany({});
+      await tx.team.deleteMany({});
+      await tx.emailVerification.deleteMany({});
+      const { count: studentCount } = await tx.student.deleteMany({});
+      return studentCount;
+    });
 
     if (count === 0) {
       return res.json({ success: true, message: "No students to clear", data: { count: 0 } });

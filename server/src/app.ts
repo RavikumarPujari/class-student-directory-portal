@@ -9,6 +9,7 @@ import studentsRoutes from "./routes/students.routes";
 import authRoutes from "./routes/auth.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import studentAuthRoutes from "./routes/studentAuth.routes";
+import studentVerificationRoutes from "./routes/studentVerification.routes";
 import teamsRoutes from "./routes/teams.routes";
 import teamInvitationsRoutes from "./routes/teamInvitations.routes";
 import notificationsRoutes from "./routes/notifications.routes";
@@ -46,6 +47,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/students", studentsRoutes);
 app.use("/api/students/auth", studentAuthRoutes);
+app.use("/api/students/verification", studentVerificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/teams", teamsRoutes);
 app.use("/api/team-invitations", teamInvitationsRoutes);
