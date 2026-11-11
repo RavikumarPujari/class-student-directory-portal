@@ -25,8 +25,7 @@ export async function getMatchingStudents(req: AuthenticatedRequest, res: Respon
 
     if (!team) throw new HttpError(404, "Team not found");
     if (team.leaderId !== leaderId) throw new HttpError(403, "Only the team leader can access matching recommendations");
-    if (!team.requiredSkills || team.requiredSkills.trim() === "") throw new HttpError(400, "Team has no required skills to match against");
-
+    
     const currentCapacity = team.members.length + team.invitations.length;
     if (currentCapacity >= team.maxSize) {
       throw new HttpError(400, "Team is at maximum capacity (including pending invitations). Cannot invite more students.");
@@ -41,7 +40,6 @@ export async function getMatchingStudents(req: AuthenticatedRequest, res: Respon
     team.invitations.forEach(inv => {
       if (inv.status === "PENDING") {
         pendingInvitationMap.set(inv.studentId, inv.status);
-        excludedStudentIds.add(inv.studentId); // Exclude from being recommended again
       }
     });
 
@@ -55,10 +53,10 @@ export async function getMatchingStudents(req: AuthenticatedRequest, res: Respon
 
     if (search) {
       whereClause.OR = [
-        { name: { contains: search } },
-        { usn: { contains: search } },
-        { skills: { contains: search } },
-        { favoriteDomain: { contains: search } }
+        { name: { contains: search, mode: "insensitive" } },
+        { usn: { contains: search, mode: "insensitive" } },
+        { skills: { contains: search, mode: "insensitive" } },
+        { favoriteDomain: { contains: search, mode: "insensitive" } }
       ];
     }
 

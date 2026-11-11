@@ -1,6 +1,7 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Users, Search, Loader2, Shield, Calendar, Code, CheckCircle2 } from "lucide-react";
+import { Users, Search, Loader2, Shield, Code, CheckCircle2, Users2, ArrowLeft, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -50,43 +51,63 @@ export function TeamsDirectory() {
   );
 
   return (
-    <div className="space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between bg-card p-6 rounded-xl border border-border/50 shadow-sm relative overflow-hidden"
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-teal/5 via-transparent to-transparent pointer-events-none" />
-        <div className="relative z-10">
-          <h1 className="font-display text-2xl font-extrabold sm:text-3xl text-foreground flex items-center gap-2">
-            <Users className="h-7 w-7 text-teal" />
-            Teams Directory
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground max-w-lg">Discover active teams, review their required skills, and send a request to collaborate on the next big project.</p>
+    <div className="space-y-6 max-w-7xl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-200/80 pb-5 gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20">
+              <Users2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-display">
+                Teams Directory
+              </h1>
+              <p className="text-sm text-slate-500">
+                Discover active student teams, review needed skills, and collaborate on projects
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="relative w-full sm:w-80 z-10">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="flex items-center gap-2.5 self-stretch sm:self-auto">
+          <Button asChild variant="outline" size="sm" className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50">
+            <Link to="/student/teams/me">My Teams</Link>
+          </Button>
+          <Button asChild size="sm" className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-xs">
+            <Link to="/student/teams/create">
+              <UserPlus className="mr-1.5 h-4 w-4" /> Create Team
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
-            placeholder="Search by team name or skills..."
+            placeholder="Search teams by name or required skills (e.g. React, Python, Cloud)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-background/50 border-border/50 focus:border-teal/50 h-11"
+            className="pl-10 h-10 rounded-xl border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-indigo-500 focus:ring-indigo-500"
           />
         </div>
-      </motion.div>
+      </div>
 
       {loading ? (
         <div className="flex justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-teal" />
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         </div>
       ) : filteredTeams.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center border border-dashed border-border/50 rounded-xl bg-card/30 backdrop-blur-sm">
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4 border border-border/50 shadow-inner">
-            <Search className="h-8 w-8 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+          <div className="h-14 w-14 rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20 flex items-center justify-center mb-3">
+            <Search className="h-6 w-6 text-indigo-600" />
           </div>
-          <h3 className="text-xl font-bold text-foreground">No teams found</h3>
-          <p className="text-muted-foreground mt-2 max-w-sm">We couldn't find any teams matching your current search criteria. Try using different keywords.</p>
-          <Button variant="outline" className="mt-6 border-border text-foreground hover:bg-muted" onClick={() => setSearch("")}>
+          <h3 className="text-lg font-bold text-slate-900 font-display">No teams found</h3>
+          <p className="text-slate-500 text-xs mt-1 max-w-sm">
+            We couldn't find any teams matching your search. Try different keywords or clear your search.
+          </p>
+          <Button variant="outline" size="sm" className="mt-4 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs" onClick={() => setSearch("")}>
             Clear Search
           </Button>
         </div>
@@ -98,54 +119,54 @@ export function TeamsDirectory() {
             return (
               <motion.div
                 key={team.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
+                transition={{ delay: idx * 0.04 }}
               >
-                <Card className={`h-full flex flex-col relative overflow-hidden transition-all duration-300 hover:shadow-lg ${isFull ? 'border-border/40 bg-card/40' : 'border-border/70 bg-card hover:border-teal/50'}`}>
-                  {/* Accent Top Border */}
-                  <div className={`absolute top-0 left-0 right-0 h-1 ${isFull ? 'bg-muted' : 'bg-gradient-to-r from-teal to-gold'}`} />
+                <Card className="h-full flex flex-col rounded-2xl border border-slate-200/90 bg-white shadow-xs hover:shadow-md transition-all overflow-hidden relative">
+                  <div className={`h-1.5 w-full ${isFull ? 'bg-slate-200' : 'bg-gradient-to-r from-indigo-500 to-blue-500'}`} />
                   
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="space-y-1.5">
-                        <CardTitle className={`text-xl leading-tight line-clamp-1 ${isFull ? 'text-muted-foreground' : 'text-foreground'}`}>
+                  <CardHeader className="pb-3 pt-5 px-5">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg font-bold text-slate-900 line-clamp-1">
                           {team.name}
                         </CardTitle>
-                        <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-                          <Shield className={`h-3.5 w-3.5 ${isFull ? 'text-muted-foreground' : 'text-gold'}`} />
-                          <span className="truncate max-w-[120px]">{team.leader.name}</span>
+                        <CardDescription className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <Shield className="h-3.5 w-3.5 text-indigo-600" />
+                          <span className="truncate max-w-[130px] font-medium text-slate-700">{team.leader.name}</span>
                         </CardDescription>
                       </div>
                       
-                      {/* Progress Circle or Badge */}
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${isFull ? 'bg-muted/50 text-muted-foreground border-border/50' : 'bg-teal/10 text-teal border-teal/20'}`}>
-                          {team.memberCount} / {team.maxSize} {isFull ? 'Full' : 'Slots'}
-                        </span>
-                      </div>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                        isFull 
+                          ? 'bg-slate-100 text-slate-500 border-slate-200' 
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}>
+                        {team.memberCount} / {team.maxSize} {isFull ? 'Full' : 'Members'}
+                      </span>
                     </div>
                   </CardHeader>
 
-                  <CardContent className="flex-1 flex flex-col pt-0">
-                    <div className="flex-1 space-y-4">
-                      <p className={`text-sm line-clamp-2 ${isFull ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}>
+                  <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+                    <div className="flex-1 space-y-3">
+                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                         {team.description || "No description provided."}
                       </p>
 
                       {team.requiredSkills && (
-                        <div className="space-y-2">
-                          <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider ${isFull ? 'text-muted-foreground/70' : 'text-foreground/70'}`}>
-                            <Code className="h-3 w-3" /> Skills
+                        <div>
+                          <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                            <Code className="h-3 w-3" /> Required Skills
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-1">
                             {team.requiredSkills.split(",").slice(0, 4).map((s, i) => (
-                              <span key={i} className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${isFull ? 'bg-background/50 border-border/50 text-muted-foreground/70' : 'bg-background border-border text-foreground hover:border-teal/30 transition-colors'}`}>
+                              <span key={i} className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
                                 {s.trim()}
                               </span>
                             ))}
                             {team.requiredSkills.split(",").length > 4 && (
-                              <span className="text-[10px] bg-muted/50 px-2 py-0.5 rounded-md text-muted-foreground font-medium">
+                              <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-500 font-medium">
                                 +{team.requiredSkills.split(",").length - 4}
                               </span>
                             )}
@@ -154,15 +175,19 @@ export function TeamsDirectory() {
                       )}
                     </div>
                     
-                    <div className="mt-6 pt-4 border-t border-border/40">
+                    <div className="mt-5 pt-4 border-t border-slate-100">
                       {isStudentAuthenticated ? (
                         isLeader ? (
-                          <div className="flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground py-2 border border-dashed border-border rounded-md bg-muted/20">
-                            <CheckCircle2 className="h-4 w-4" /> You manage this team
+                          <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-indigo-700 py-2 rounded-xl bg-indigo-50 border border-indigo-100">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> You manage this team
                           </div>
                         ) : (
                           <Button
-                            className={`w-full font-semibold transition-all shadow-sm ${isFull ? 'bg-muted text-muted-foreground hover:bg-muted cursor-not-allowed' : 'bg-teal hover:bg-teal/90 text-black hover:shadow-teal/20'}`}
+                            className={`w-full h-10 rounded-xl text-xs font-semibold transition-all ${
+                              isFull 
+                                ? 'bg-slate-100 text-slate-400 hover:bg-slate-100 cursor-not-allowed border border-slate-200' 
+                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                            }`}
                             disabled={isFull}
                             onClick={() => handleJoinRequest(team.id)}
                           >
@@ -170,8 +195,12 @@ export function TeamsDirectory() {
                           </Button>
                         )
                       ) : (
-                        <Button className="w-full" variant="outline" onClick={() => window.location.href = '/student/login'}>
-                          Login to Join
+                        <Button 
+                          asChild
+                          variant="outline"
+                          className="w-full h-10 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+                        >
+                          <Link to="/student/login">Login to Join</Link>
                         </Button>
                       )}
                     </div>
@@ -185,3 +214,4 @@ export function TeamsDirectory() {
     </div>
   );
 }
+export default TeamsDirectory;

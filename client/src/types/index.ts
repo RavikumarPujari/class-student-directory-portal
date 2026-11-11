@@ -18,6 +18,7 @@ export interface Student {
  lastLoginAt: string | null;
  createdAt: string;
  updatedAt: string;
+  isEmailVerified?: boolean;
 }
 
 export interface StudentFormValues {
@@ -37,6 +38,7 @@ export interface StudentFormValues {
  bio?: string;
  photo?: string;
  password?: string;
+  verifyToken?: string;
 }
 
 export interface Pagination {
